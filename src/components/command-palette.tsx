@@ -69,7 +69,7 @@ function CommandPaletteBody({
     { id: "nav-home", label: "Home", sub: "Today's overview", group: "Navigate", icon: <Home className="h-4 w-4" />, run: () => router.push("/dashboard") },
     { id: "nav-workspace", label: "Projects", sub: "Your project hierarchy", group: "Navigate", icon: <Network className="h-4 w-4" />, run: () => router.push("/workspace") },
     { id: "nav-goals", label: "Goals & Habits", sub: "Progress, streaks, consistency", group: "Navigate", icon: <Target className="h-4 w-4" />, run: () => router.push("/goals") },
-    { id: "nav-timer", label: "Timer", sub: "Weekly time-blocking calendar", group: "Navigate", icon: <Clock className="h-4 w-4" />, run: () => router.push("/timer") },
+    { id: "nav-calendar", label: "Calendar", sub: "Weekly time-blocking view", group: "Navigate", icon: <Clock className="h-4 w-4" />, run: () => router.push("/calendar") },
     { id: "nav-pomodoro", label: "Pomodoro", sub: "Focus blocks and real breaks", group: "Navigate", icon: <Timer className="h-4 w-4" />, run: () => router.push("/pomodoro") },
     { id: "nav-analytics", label: "Analytics", sub: "Where your time goes", group: "Navigate", icon: <BarChart3 className="h-4 w-4" />, run: () => router.push("/analytics") },
     { id: "nav-history", label: "Time History", sub: "Every session", group: "Navigate", icon: <History className="h-4 w-4" />, run: () => router.push("/history") },

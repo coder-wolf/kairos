@@ -151,33 +151,32 @@ export function WeekCalendar({
 
       <div className="scroll-thin overflow-x-auto">
         <div className="min-w-[760px]">
-          <div className="flex border-b border-border bg-surface/95 backdrop-blur">
-            <div className="shrink-0" style={{ width: GUTTER_WIDTH }} />
-            {days.map((day) => (
-              <div
-                key={day.key}
-                className={cn(
-                  "flex flex-1 flex-col items-center gap-1 border-l border-border/70 py-2.5",
-                  day.isWeekend && "bg-surface-2/30",
-                  day.isToday && "bg-primary-soft/40",
-                )}
-              >
-                <p className={cn("text-[9px] font-bold uppercase tracking-[0.14em]", day.isToday ? "text-primary" : "text-muted-2")}>
-                  {day.label}
-                </p>
-                <p
+          <div ref={scrollRef} className="scroll-thin max-h-[calc(100vh-300px)] min-h-[480px] overflow-y-auto">
+            <div className="sticky top-0 z-30 flex border-b border-border bg-surface/95 backdrop-blur">
+              <div className="shrink-0" style={{ width: GUTTER_WIDTH }} />
+              {days.map((day) => (
+                <div
+                  key={day.key}
                   className={cn(
-                    "grid h-7 w-7 place-items-center rounded-full text-[13px] font-extrabold tracking-[-0.03em]",
-                    day.isToday ? "bg-primary text-primary-contrast shadow-sm" : "text-text",
+                    "flex flex-1 flex-col items-center gap-1 border-l border-border/70 py-2.5",
+                    day.isWeekend && "bg-surface-2/30",
+                    day.isToday && "bg-primary-soft/40",
                   )}
                 >
-                  {day.dayNumber}
-                </p>
-              </div>
-            ))}
-          </div>
-
-          <div ref={scrollRef} className="scroll-thin max-h-[calc(100vh-300px)] min-h-[480px] overflow-y-auto">
+                  <p className={cn("text-[9px] font-bold uppercase tracking-[0.14em]", day.isToday ? "text-primary" : "text-muted-2")}>
+                    {day.label}
+                  </p>
+                  <p
+                    className={cn(
+                      "grid h-7 w-7 place-items-center rounded-full text-[13px] font-extrabold tracking-[-0.03em]",
+                      day.isToday ? "bg-primary text-primary-contrast shadow-sm" : "text-text",
+                    )}
+                  >
+                    {day.dayNumber}
+                  </p>
+                </div>
+              ))}
+            </div>
             <div className="flex">
               <div className="relative shrink-0 border-r border-border bg-surface/80" style={{ width: GUTTER_WIDTH, height: TOTAL_HEIGHT }}>
                 {Array.from({ length: 24 }).map((_, hour) => (

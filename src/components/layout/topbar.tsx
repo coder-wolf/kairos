@@ -18,7 +18,7 @@ function pageTitle(pathname: string) {
   if (pathname.startsWith("/goals")) return "Goals & Habits";
   if (pathname.startsWith("/analytics")) return "Analytics";
   if (pathname.startsWith("/history")) return "Time History";
-  if (pathname.startsWith("/timer")) return "Timer";
+  if (pathname.startsWith("/calendar")) return "Calendar";
   if (pathname.startsWith("/pomodoro")) return "Pomodoro";
   if (pathname.startsWith("/settings")) return "Settings";
   if (pathname.startsWith("/billing")) return "Plan & Billing";

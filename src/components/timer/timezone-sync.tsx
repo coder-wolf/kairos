@@ -15,7 +15,7 @@ export function TimezoneSync({ week, timezone }: { week: string; timezone: strin
       const detected = Intl.DateTimeFormat().resolvedOptions().timeZone;
       if (!detected || detected === timezone) return;
       const params = new URLSearchParams({ week, tz: detected });
-      router.replace(`/timer?${params.toString()}`);
+      router.replace(`/calendar?${params.toString()}`);
     } catch {
       // Keep the saved timezone if detection is unavailable.
     }

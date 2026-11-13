@@ -36,7 +36,7 @@ Time is the unit of progress here — not task checkboxes or vague productivity 
 
 A weekly Google Calendar–style view of every time entry, with overlapping sessions, overnight splitting, a live current-time line, and click-to-edit blocks.
 
-![Weekly timer calendar](docs/screenshots/timer.png)
+![Weekly calendar](docs/screenshots/calendar.png)
 
 ### Goals that stay independent at every level
 
@@ -86,7 +86,7 @@ Time distribution, daily/weekly/monthly trends, weekday rhythm, time-of-day patt
 - Focus-only time saved to history as Pomodoro sessions
 - Custom duration editing mid-session
 
-### Weekly timer calendar
+### Weekly calendar
 - Google Calendar–style weekly time-blocking grid
 - Time entries placed by actual start/end time
 - Side-by-side layout for overlaps
@@ -233,7 +233,7 @@ src/
     (app)/
       dashboard/       # Daily overview
       workspace/       # Projects hierarchy
-      timer/           # Weekly time-blocking calendar
+      calendar/        # Weekly time-blocking calendar
       goals/           # Goals & habits spreadsheet
       pomodoro/        # Full Pomodoro experience
       analytics/       # Reports and insights

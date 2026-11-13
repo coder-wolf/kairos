@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { decrypt } from "@/lib/session";
 
-const APP_PREFIXES = ["/dashboard", "/workspace", "/items", "/goals", "/analytics", "/history", "/settings", "/billing", "/pomodoro", "/timer"];
+const APP_PREFIXES = ["/dashboard", "/workspace", "/items", "/goals", "/analytics", "/history", "/settings", "/billing", "/pomodoro", "/calendar", "/timer"];
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
