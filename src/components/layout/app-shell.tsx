@@ -35,6 +35,7 @@ export function AppShell({
         todayKey={todayKey}
         initialCompleted={pomodoro.completed}
         initialFocusSeconds={pomodoro.focusSeconds}
+        isPro={user.isPro}
       >
         <QuickActionsProvider user={user} items={items} goals={goals} todayKey={todayKey}>
         <div className="min-h-dvh">

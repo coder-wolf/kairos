@@ -7,6 +7,7 @@ import {
   BarChart3,
   CalendarRange,
   ChevronDown,
+  CreditCard,
   ClockPlus,
   Download,
   FolderPlus,
@@ -18,6 +19,7 @@ import {
   Pause,
   Play,
   Settings,
+  Sparkles,
   Square,
   Target,
   Timer,
@@ -255,6 +257,7 @@ export function SidebarContent({
 
         <div>
           <p className="mb-1.5 px-3 text-[10px] font-bold uppercase tracking-[0.16em] text-muted-2">System</p>
+          <SidebarNavLink href="/billing" label="Billing" icon={CreditCard} pathname={pathname} onNavigate={onNavigate} />
           <SidebarNavLink href="/settings" label="Settings" icon={Settings} pathname={pathname} onNavigate={onNavigate} />
         </div>
       </nav>
@@ -278,6 +281,12 @@ export function SidebarContent({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" side="top" className="w-[230px]">
             <DropdownMenuLabel>{user.email}</DropdownMenuLabel>
+            <DropdownMenuItem asChild>
+              <Link href="/billing">
+                {user.isPro ? <CreditCard className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
+                {user.isPro ? "Billing" : "Upgrade to Pro"}
+              </Link>
+            </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <Link href="/settings">
                 <Settings className="h-4 w-4" /> Settings

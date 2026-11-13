@@ -7,6 +7,7 @@ import { db } from "./db";
 import { getSession } from "./session";
 import type { GoalSummary, ItemOption, SessionRow, TimerSnapshot, UserSummary } from "./types";
 import { getAncestorPath } from "./items";
+import { isBillingEntitled, planSummary } from "./plan";
 
 export const verifySession = cache(async () => {
   const session = await getSession();
@@ -18,7 +19,7 @@ export const getCurrentUser = cache(async () => {
   const { userId } = await verifySession();
   const user = await db.user.findUnique({
     where: { id: userId },
-    include: { workspace: true },
+    include: { workspace: true, billing: true },
   });
   if (!user?.workspace) redirect("/api/auth/clear");
   return user;
@@ -38,8 +39,10 @@ export function toUserSummary(user: {
   timezone: string;
   weekStartsOn: number;
   theme: string;
+  billing?: { status: string; endsAt: Date | null; currentPeriodEnd: Date | null; renewsAt: Date | null } | null;
   workspace: { id: string; name: string; icon: string | null };
 }): UserSummary {
+  const plan = planSummary(isBillingEntitled(user.billing));
   return {
     id: user.id,
     name: user.name,
@@ -47,6 +50,8 @@ export function toUserSummary(user: {
     timezone: user.timezone,
     weekStartsOn: user.weekStartsOn,
     theme: user.theme,
+    plan: plan.plan,
+    isPro: plan.isPro,
     workspace: {
       id: user.workspace.id,
       name: user.workspace.name,

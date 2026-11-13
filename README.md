@@ -77,7 +77,7 @@ Time distribution, daily/weekly/monthly trends, weekday rhythm, time-of-day patt
 - GitHub-style habit history with distinct shades for completion and missed periods
 - Spreadsheet view for reviewing every day of a month
 
-### Pomodoro
+### Pomodoro **Pro**
 - Focus, short-break, and long-break phases
 - Configurable durations, rounds before a long break, auto-start options, and sound cues
 - Starts instantly from the sidebar or workspace
@@ -95,7 +95,8 @@ Time distribution, daily/weekly/monthly trends, weekday rhythm, time-of-day patt
 - Automatically uses the browser’s current timezone — no GPS permission
 
 ### Dashboard and analytics
-- Today’s time, weekly trend, goal-directed percentage, and best streak
+- Today’s time, weekly trend, goal-directed percentage, and best streak (free)
+- **Advanced analytics is Pro:** distribution, weekday rhythm, time-of-day, goal health, and item reports
 - Compact all-goals table with expansion
 - Expandable Areas & Projects tree
 - Table-style recent sessions and a habit-history grid
@@ -110,6 +111,55 @@ Time distribution, daily/weekly/monthly trends, weekday rhythm, time-of-day patt
 - Accessible dialogs and menus with Radix UI
 - JSON data export
 - In-app reminders and clear empty states
+
+## Plans
+
+Kairos is free for everyday time tracking, with an optional Pro plan.
+
+| | Free | Pro |
+| --- | --- | --- |
+| Timers, manual entries, sessions | ✓ | ✓ |
+| Flexible projects and hierarchy | ✓ | ✓ |
+| Weekly timer calendar | ✓ | ✓ |
+| Dashboard and core goals | ✓ | ✓ |
+| Active items | 15 | Unlimited |
+| Active goals | 3 | Unlimited |
+| Pomodoro | — | ✓ |
+| Advanced analytics | — | ✓ |
+
+The seeded demo account is Pro so every screen is visible.
+
+## Billing setup (Lemon Squeezy)
+
+Payments are optional; the app runs normally without them. To enable Pro checkout:
+
+1. Create a **Lemon Squeezy** store.
+2. Create a product with **two subscription variants**: monthly and yearly.
+3. Create an API key and copy the store ID and variant IDs.
+4. Add the environment variables below.
+5. Add a webhook pointing to `https://YOUR_DOMAIN/api/webhooks/lemonsqueezy`.
+6. Subscribe the webhook to subscription events (created, updated, cancelled, resumed, expired, paused, unpaused, payment success/failure).
+7. Run `pnpm db:migrate` (or `prisma migrate deploy` in production).
+
+```env
+LEMON_SQUEEZY_API_KEY=""
+LEMON_SQUEEZY_STORE_ID=""
+LEMON_SQUEEZY_MONTHLY_VARIANT_ID=""
+LEMON_SQUEEZY_YEARLY_VARIANT_ID=""
+LEMON_SQUEEZY_WEBHOOK_SECRET=""
+NEXT_PUBLIC_APP_URL="https://your-domain.com"
+
+# Optional display values on the billing page
+NEXT_PUBLIC_PRO_MONTHLY_PRICE="$8"
+NEXT_PUBLIC_PRO_YEARLY_PRICE="$80"
+```
+
+Billing flow:
+
+- `POST /api/webhooks/lemonsqueezy` verifies the `X-Signature` HMAC before writing anything.
+- Checkout custom data carries `user_id` and `workspace_id`, with email/customer fallback matching.
+- Subscriptions remain Pro until `ends_at` when cancelled.
+- Checkout and subscription management are hosted by Lemon Squeezy; card data never touches Kairos.
 
 ## Quick start
 
@@ -174,7 +224,7 @@ The login screen also has an **Open the demo workspace** button.
 
 ```text
 prisma/
-  schema.prisma        # User, Workspace, Item, Goal, TimeSession, TimerState
+  schema.prisma        # User, Workspace, Item, Goal, TimeSession, TimerState, BillingAccount
   seed.ts              # Realistic demo workspace
 
 src/
@@ -190,8 +240,10 @@ src/
       history/         # Session table and calendar
       items/[id]/      # Item detail + item analytics
       settings/        # Profile, workspace, preferences, security
-    actions/           # Server Actions
+      billing/         # Plans, checkout, subscription status
+    actions/           # Server Actions (auth, timer, goals, billing, settings)
     api/export/        # JSON export
+    api/webhooks/      # Lemon Squeezy webhook
   components/          # UI, charts, dialogs, timer, calendar, dashboards
   lib/                 # Auth, timezone/time math, goals, analytics, Prisma
 ```
@@ -237,6 +289,12 @@ User ─── TimerState (one active timer per user)
 | --- | --- | --- |
 | `DATABASE_URL` | Yes | PostgreSQL connection string |
 | `SESSION_SECRET` | Yes | HS256 signing key for session cookies |
+| `LEMON_SQUEEZY_API_KEY` | For billing | Lemon Squeezy API key |
+| `LEMON_SQUEEZY_STORE_ID` | For billing | Store ID |
+| `LEMON_SQUEEZY_MONTHLY_VARIANT_ID` | For billing | Monthly subscription variant |
+| `LEMON_SQUEEZY_YEARLY_VARIANT_ID` | For billing | Yearly subscription variant |
+| `LEMON_SQUEEZY_WEBHOOK_SECRET` | For billing | Webhook signing secret |
+| `NEXT_PUBLIC_APP_URL` | Recommended | Redirect base URL for checkout |
 
 ## Notes
 

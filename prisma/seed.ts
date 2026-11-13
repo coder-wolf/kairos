@@ -53,6 +53,19 @@ async function main() {
 
   const workspace = user.workspace!;
 
+  // The demo account is a Pro workspace so every feature is visible.
+  await prisma.billingAccount.create({
+    data: {
+      userId: user.id,
+      provider: "demo",
+      status: "active",
+      plan: "pro",
+      interval: "yearly",
+      currentPeriodEnd: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+      renewsAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+    },
+  });
+
   const items: Record<ItemKey, string> = {};
 
   async function addItem(

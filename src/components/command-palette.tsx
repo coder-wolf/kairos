@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   BarChart3,
   Clock,
+  CreditCard,
   ClockPlus,
   CornerDownLeft,
   FolderPlus,
@@ -72,6 +73,7 @@ function CommandPaletteBody({
     { id: "nav-pomodoro", label: "Pomodoro", sub: "Focus blocks and real breaks", group: "Navigate", icon: <Timer className="h-4 w-4" />, run: () => router.push("/pomodoro") },
     { id: "nav-analytics", label: "Analytics", sub: "Where your time goes", group: "Navigate", icon: <BarChart3 className="h-4 w-4" />, run: () => router.push("/analytics") },
     { id: "nav-history", label: "Time History", sub: "Every session", group: "Navigate", icon: <History className="h-4 w-4" />, run: () => router.push("/history") },
+    { id: "nav-billing", label: "Plan & Billing", sub: "Subscription and Pro features", group: "Navigate", icon: <CreditCard className="h-4 w-4" />, run: () => router.push("/billing") },
     { id: "nav-settings", label: "Settings", sub: "Profile and preferences", group: "Navigate", icon: <Settings className="h-4 w-4" />, run: () => router.push("/settings") },
   ];
 

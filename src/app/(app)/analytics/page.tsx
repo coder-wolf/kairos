@@ -14,6 +14,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { AnalyticsControls } from "@/components/analytics/analytics-controls";
+import { ProGate } from "@/components/billing/pro-gate";
 import { AreaTrendChart, DistributionDonut } from "@/components/charts";
 import { Progress, RingProgress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
@@ -59,6 +60,33 @@ export default async function AnalyticsPage({
 }) {
   const params = await searchParams;
   const { user, items, goals } = await getAppContext();
+
+  if (!user.isPro) {
+    return (
+      <div className="space-y-6 animate-fade-in">
+        <header>
+          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-2">Signal, not noise</p>
+          <h1 className="mt-1.5 text-[30px] font-extrabold leading-tight tracking-[-0.04em] md:text-[38px]">
+            Analytics<span className="text-primary">.</span>
+          </h1>
+          <p className="mt-1.5 max-w-xl text-sm leading-6 text-muted">
+            Understand where your hours actually go and whether that matches what you meant to do.
+          </p>
+        </header>
+        <ProGate
+          title="Analytics is a Pro feature"
+          description="See time distribution, weekly and monthly trends, weekday patterns, hour-of-day rhythm, goal health, habit consistency, and item-level reports."
+          features={[
+            "Interactive distribution and trend charts",
+            "Goal completion and habit consistency",
+            "Weekday and time-of-day patterns",
+            "Drill down into any project",
+            "Custom date ranges and comparisons",
+          ]}
+        />
+      </div>
+    );
+  }
   const tz = user.timezone;
   const weekStartsOn = user.weekStartsOn;
   const now = new Date();

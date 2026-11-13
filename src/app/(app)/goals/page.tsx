@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import { CheckCircle2, Flame, Target, TrendingUp } from "lucide-react";
 import { GoalsSpreadsheet, type GoalsSpreadsheetRow, type SpreadsheetDay } from "@/components/goals/goals-spreadsheet";
+import { UpgradeBanner } from "@/components/billing/upgrade-banner";
 import { NewGoalButton } from "@/components/goals/new-goal-button";
 import { getAppContext, toGoalSummaries } from "@/lib/dal";
 import { computeGoalProgress, computeStreaks, dailyTotalsForGoal } from "@/lib/goals";
 import { getSessionsWindow } from "@/lib/queries";
 import { getAncestorPath } from "@/lib/items";
+import { FREE_GOAL_LIMIT } from "@/lib/plan";
 import { getDateRange, startOfDayKey, toDateKey, weekdayOfKey } from "@/lib/time";
 
 export const metadata: Metadata = { title: "Goals & Habits" };
@@ -186,6 +188,12 @@ export default async function GoalsPage({
           </div>
         ))}
       </div>
+
+      {!user.isPro && active.length >= FREE_GOAL_LIMIT ? (
+        <UpgradeBanner
+          message={`You've reached the free plan limit of ${FREE_GOAL_LIMIT} active goals. Upgrade to Pro for unlimited goals and habits.`}
+        />
+      ) : null}
 
       <GoalsSpreadsheet
         rows={spreadsheetRows}

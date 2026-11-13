@@ -5,6 +5,8 @@ import { fromZonedTime } from "date-fns-tz";
 import type { ActionResult, GoalInput } from "@/lib/action-types";
 import { requireWorkspace, revalidateApp } from "@/lib/authz";
 import { db } from "@/lib/db";
+import { getPlanForUser } from "@/lib/billing";
+import { FREE_GOAL_LIMIT } from "@/lib/plan";
 import { goalPeriod, goalTargetRevisions } from "@/lib/goals";
 import { toDateKey } from "@/lib/time";
 
@@ -48,6 +50,17 @@ export async function createGoal(input: GoalInput): Promise<ActionResult> {
     where: { id: input.itemId, workspaceId: workspace.id },
   });
   if (!item) return { ok: false, error: "Pick an item for this goal." };
+
+  const plan = await getPlanForUser(user.id);
+  if (!plan.isPro) {
+    const activeCount = await db.goal.count({ where: { workspaceId: workspace.id, status: "ACTIVE" } });
+    if (activeCount >= FREE_GOAL_LIMIT) {
+      return {
+        ok: false,
+        error: `The free plan includes ${FREE_GOAL_LIMIT} active goals. Upgrade to Pro for unlimited goals.`,
+      };
+    }
+  }
 
   const startDate = fromZonedTime(`${input.startDate} 00:00:00`, user.timezone);
   const endDate = input.endDate ? fromZonedTime(`${input.endDate} 00:00:00`, user.timezone) : null;
@@ -136,12 +149,25 @@ export async function updateGoal(input: GoalInput): Promise<ActionResult> {
 }
 
 export async function setGoalStatus(id: string, status: GoalStatus): Promise<ActionResult> {
-  const { workspace } = await requireWorkspace();
+  const { user, workspace } = await requireWorkspace();
   if (!Object.values(GoalStatus).includes(status)) {
     return { ok: false, error: "Invalid goal status." };
   }
   const goal = await db.goal.findFirst({ where: { id, workspaceId: workspace.id } });
   if (!goal) return { ok: false, error: "Goal not found." };
+
+  if (status === "ACTIVE") {
+    const plan = await getPlanForUser(user.id);
+    if (!plan.isPro) {
+      const activeCount = await db.goal.count({ where: { workspaceId: workspace.id, status: "ACTIVE" } });
+      if (activeCount >= FREE_GOAL_LIMIT) {
+        return {
+          ok: false,
+          error: `The free plan includes ${FREE_GOAL_LIMIT} active goals. Upgrade to Pro for unlimited goals.`,
+        };
+      }
+    }
+  }
 
   await db.goal.update({ where: { id }, data: { status } });
   revalidateApp();

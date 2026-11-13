@@ -69,6 +69,7 @@ type PomodoroContextValue = {
   focusSeconds: number;
   itemId: string | null;
   active: boolean;
+  isPro: boolean;
   windowOpen: boolean;
   openWindow: () => void;
   closeWindow: () => void;
@@ -137,11 +138,13 @@ export function PomodoroProvider({
   todayKey,
   initialCompleted,
   initialFocusSeconds,
+  isPro,
   children,
 }: {
   todayKey: string;
   initialCompleted: number;
   initialFocusSeconds: number;
+  isPro: boolean;
   children: React.ReactNode;
 }) {
   const router = useRouter();
@@ -340,6 +343,11 @@ export function PomodoroProvider({
   }, []);
 
   const start = React.useCallback(() => {
+    if (!isPro) {
+      toast.info("Pomodoro is a Pro feature.");
+      router.push("/billing");
+      return;
+    }
     const current = runRef.current;
     if (current.status !== "idle") return;
     if (current.phase === "focus" && timer) {
@@ -361,9 +369,14 @@ export function PomodoroProvider({
       phaseId: `${current.phase}-${startAt}`,
     });
     setNow(startAt);
-  }, [timer]);
+  }, [timer, isPro, router]);
 
   const startFocus = React.useCallback(() => {
+    if (!isPro) {
+      toast.info("Pomodoro is a Pro feature.");
+      router.push("/billing");
+      return;
+    }
     const current = runRef.current;
     if (current.status !== "idle") {
       setWindowOpen(true);
@@ -390,7 +403,7 @@ export function PomodoroProvider({
       phaseId: `focus-${startAt}`,
     });
     setNow(startAt);
-  }, [timer]);
+  }, [timer, isPro, router]);
 
   const toggle = React.useCallback(() => {
     const current = runRef.current;
@@ -551,6 +564,7 @@ export function PomodoroProvider({
       focusSeconds,
       itemId: run.itemId,
       active: run.status !== "idle",
+      isPro,
       windowOpen,
       openWindow,
       closeWindow,
@@ -581,6 +595,7 @@ export function PomodoroProvider({
       windowOpen,
       openWindow,
       closeWindow,
+      isPro,
     ],
   );
 

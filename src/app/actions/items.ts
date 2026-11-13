@@ -4,16 +4,31 @@ import { ItemType } from "@prisma/client";
 import type { ActionResult, ItemInput } from "@/lib/action-types";
 import { requireWorkspace, revalidateApp } from "@/lib/authz";
 import { db } from "@/lib/db";
+import { getPlanForUser } from "@/lib/billing";
+import { FREE_ITEM_LIMIT } from "@/lib/plan";
 import { getSubtreeIds } from "@/lib/items";
 import { stopTimerForUser } from "@/lib/timer-service";
 import { ITEM_PALETTE } from "@/lib/utils";
 
 export async function createItem(input: ItemInput): Promise<ActionResult> {
-  const { workspace } = await requireWorkspace();
+  const { user, workspace } = await requireWorkspace();
   const name = input.name.trim();
 
   if (!name) return { ok: false, error: "Give this item a name." };
   if (name.length > 80) return { ok: false, error: "Keep names under 80 characters." };
+
+  const plan = await getPlanForUser(user.id);
+  if (!plan.isPro) {
+    const count = await db.item.count({
+      where: { workspaceId: workspace.id, archivedAt: null, isSystem: false },
+    });
+    if (count >= FREE_ITEM_LIMIT) {
+      return {
+        ok: false,
+        error: `The free plan includes ${FREE_ITEM_LIMIT} active items. Upgrade to Pro for unlimited projects.`,
+      };
+    }
+  }
 
   if (input.parentId) {
     const parent = await db.item.findFirst({ where: { id: input.parentId, workspaceId: workspace.id } });
@@ -115,9 +130,22 @@ export async function archiveItem(id: string): Promise<ActionResult> {
 }
 
 export async function restoreItem(id: string): Promise<ActionResult> {
-  const { workspace } = await requireWorkspace();
+  const { user, workspace } = await requireWorkspace();
   const item = await db.item.findFirst({ where: { id, workspaceId: workspace.id } });
   if (!item) return { ok: false, error: "Item not found." };
+
+  const plan = await getPlanForUser(user.id);
+  if (!plan.isPro) {
+    const count = await db.item.count({
+      where: { workspaceId: workspace.id, archivedAt: null, isSystem: false },
+    });
+    if (count >= FREE_ITEM_LIMIT) {
+      return {
+        ok: false,
+        error: `The free plan includes ${FREE_ITEM_LIMIT} active items. Archive another item or upgrade to Pro.`,
+      };
+    }
+  }
 
   await db.item.update({ where: { id }, data: { archivedAt: null } });
   revalidateApp();

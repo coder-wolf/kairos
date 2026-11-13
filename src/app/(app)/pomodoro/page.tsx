@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Flame } from "lucide-react";
+import { ProGate } from "@/components/billing/pro-gate";
 import { PomodoroPanel } from "@/components/pomodoro/pomodoro-panel";
 import { SessionList } from "@/components/sessions/session-list";
 import { getAppContext, toItemOptions, toSessionRows } from "@/lib/dal";
@@ -10,6 +11,37 @@ export const metadata: Metadata = { title: "Pomodoro" };
 
 export default async function PomodoroPage() {
   const { user, items } = await getAppContext();
+
+  if (!user.isPro) {
+    return (
+      <div className="space-y-6 animate-fade-in">
+        <header>
+          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-2">One block at a time</p>
+          <h1 className="mt-1.5 flex items-center gap-3 text-[30px] font-extrabold leading-tight tracking-[-0.04em] md:text-[38px]">
+            <span className="grid h-10 w-10 place-items-center rounded-2xl bg-danger-soft text-danger">
+              <Flame className="h-5 w-5" />
+            </span>
+            Pomodoro<span className="text-primary">.</span>
+          </h1>
+          <p className="mt-1.5 max-w-xl text-sm leading-6 text-muted">
+            Focus blocks, real breaks, and a timer that follows you around the workspace.
+          </p>
+        </header>
+        <ProGate
+          title="Pomodoro is a Pro feature"
+          description="Run focus rounds with short and long breaks, take the timer with you in a floating window, and save only your real focus time."
+          features={[
+            "Focus and break cycles",
+            "Floating, movable Pomodoro window",
+            "Custom durations mid-session",
+            "Automatic focus sessions in history",
+            "Presets, sounds, and auto-start",
+          ]}
+        />
+      </div>
+    );
+  }
+
   const now = new Date();
   const today = getDateRange("today", user.timezone, user.weekStartsOn, { now });
   const todayKey = toDateKey(now, user.timezone);

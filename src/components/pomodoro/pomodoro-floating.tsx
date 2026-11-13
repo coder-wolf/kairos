@@ -59,6 +59,7 @@ export function PomodoroFloating({ items }: { items: ItemOption[] }) {
     toggle,
     reset,
     skip,
+    isPro,
   } = usePomodoro();
   const [editing, setEditing] = React.useState(false);
   const [draft, setDraft] = React.useState("25");
@@ -315,6 +316,7 @@ export function PomodoroFloating({ items }: { items: ItemOption[] }) {
     });
   };
 
+  if (!isPro) return null;
   if (!active && !windowOpen) return null;
 
   const color = phaseColor(phase);

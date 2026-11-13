@@ -1,6 +1,7 @@
 "use client";
 
-import { Flame } from "lucide-react";
+import Link from "next/link";
+import { Flame, LockKeyhole } from "lucide-react";
 import { usePomodoro } from "@/components/pomodoro/pomodoro-provider";
 import { cn } from "@/lib/utils";
 
@@ -11,7 +12,23 @@ export function StartPomodoroButton({
   className?: string;
   label?: string;
 }) {
-  const { status, startFocus, openWindow } = usePomodoro();
+  const { status, startFocus, openWindow, isPro } = usePomodoro();
+
+  if (!isPro) {
+    return (
+      <Link
+        href="/billing"
+        className={cn(
+          "inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl border border-danger/15 bg-danger-soft px-4 text-sm font-semibold text-danger transition-colors hover:bg-danger/10",
+          className,
+        )}
+        title="Pomodoro is included in Kairos Pro"
+      >
+        <LockKeyhole className="h-3.5 w-3.5" />
+        Unlock Pomodoro
+      </Link>
+    );
+  }
 
   return (
     <button

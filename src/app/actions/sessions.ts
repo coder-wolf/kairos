@@ -5,6 +5,7 @@ import type { ActionResult, SessionInput } from "@/lib/action-types";
 import { requireWorkspace, revalidateApp } from "@/lib/authz";
 import { db } from "@/lib/db";
 import { ensureUnassignedItem } from "@/lib/system-items";
+import { getPlanForUser } from "@/lib/billing";
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -104,6 +105,9 @@ export async function createPomodoroSession(input: {
   description?: string;
 }): Promise<ActionResult> {
   const { user, workspace } = await requireWorkspace();
+
+  const plan = await getPlanForUser(user.id);
+  if (!plan.isPro) return { ok: false, error: "Pomodoro sessions are a Pro feature." };
 
   const item = input.itemId
     ? await db.item.findFirst({

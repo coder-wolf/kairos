@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { Building2, Database, Download, LogOut, Palette, ShieldCheck, UserRound, Clock3 } from "lucide-react";
+import Link from "next/link";
+import { Building2, CreditCard, Crown, Database, Download, LogOut, Palette, ShieldCheck, UserRound, Clock3 } from "lucide-react";
 import { logout } from "@/app/actions/auth";
 import { PasswordForm, PreferencesForm, ProfileForm, WorkspaceForm } from "@/components/settings/settings-forms";
 import { Button } from "@/components/ui/button";
@@ -163,6 +164,24 @@ export default async function SettingsPage() {
             <p className="mt-3 flex items-center gap-1.5 text-[10px] text-muted-2">
               <Clock3 className="h-3 w-3" /> {sessionCount} sessions ready to export
             </p>
+          </section>
+
+          <section className="card p-5">
+            <div className="flex items-center gap-2">
+              {user.isPro ? <Crown className="h-4 w-4 text-primary" /> : <CreditCard className="h-4 w-4 text-primary" />}
+              <h2 className="text-sm font-bold tracking-tight">Plan</h2>
+            </div>
+            <p className="mt-1.5 text-[11px] leading-5 text-muted">
+              {user.isPro
+                ? "You're on Kairos Pro. Unlimited projects, goals, Pomodoro, and advanced analytics are unlocked."
+                : "You're on the free plan with up to 15 active projects, 3 goals, and core time tracking."}
+            </p>
+            <Link
+              href="/billing"
+              className="mt-4 flex h-9 items-center justify-center gap-1.5 rounded-xl border border-border bg-surface text-[12px] font-semibold transition-colors hover:bg-surface-2"
+            >
+              {user.isPro ? "Manage billing" : "Upgrade to Pro"}
+            </Link>
           </section>
 
           <section className="card p-5">

@@ -7,6 +7,8 @@ export type UserSummary = {
   timezone: string;
   weekStartsOn: number;
   theme: string;
+  plan: "free" | "pro";
+  isPro: boolean;
   workspace: {
     id: string;
     name: string;

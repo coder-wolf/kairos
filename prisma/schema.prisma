@@ -21,6 +21,32 @@ model User {
   workspace    Workspace?
   timeSessions TimeSession[]
   timer        TimerState?
+  billing      BillingAccount?
+}
+
+model BillingAccount {
+  id               String    @id @default(cuid())
+  userId           String    @unique
+  provider         String    @default("lemonsqueezy")
+  customerId       String?
+  subscriptionId   String?   @unique
+  variantId        String?
+  productId        String?
+  orderId          String?
+  status           String    @default("inactive")
+  plan             String    @default("free")
+  interval         String?
+  email            String?
+  currentPeriodEnd DateTime?
+  renewsAt         DateTime?
+  endsAt           DateTime?
+  trialEndsAt      DateTime?
+  updateUrl        String?
+  cancelUrl        String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Workspace {

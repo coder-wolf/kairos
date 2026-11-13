@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Archive, FolderKanban, Layers, Target, Timer } from "lucide-react";
+import { UpgradeBanner } from "@/components/billing/upgrade-banner";
 import { WorkspaceHeaderActions } from "@/components/workspace/workspace-header-actions";
 import { WorkspaceTree } from "@/components/workspace/workspace-tree";
 import { getAppContext } from "@/lib/dal";
@@ -8,6 +9,7 @@ import { aggregateByItem, getSubtreeIds } from "@/lib/items";
 import { getSessionsWindow } from "@/lib/queries";
 import { getDateRange, overlapSeconds } from "@/lib/time";
 import type { WorkspaceItem } from "@/lib/types";
+import { FREE_ITEM_LIMIT } from "@/lib/plan";
 import { formatDuration } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Projects" };
@@ -66,6 +68,12 @@ export default async function WorkspacePage() {
         </div>
         <WorkspaceHeaderActions />
       </header>
+
+      {!user.isPro && activeItems.length >= FREE_ITEM_LIMIT ? (
+        <UpgradeBanner
+          message={`You've reached the free plan limit of ${FREE_ITEM_LIMIT} active items. Upgrade to Pro for unlimited projects and goals.`}
+        />
+      ) : null}
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_300px]">
         <div className="min-w-0 space-y-5">
