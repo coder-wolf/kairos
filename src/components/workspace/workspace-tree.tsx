@@ -91,6 +91,7 @@ export function WorkspaceTree({ items, weekLabel }: { items: WorkspaceItem[]; we
   const [addError, setAddError] = React.useState<string | null>(null);
   const [addPending, startAddTransition] = React.useTransition();
   const [collapsed, setCollapsed] = React.useState<Set<string>>(new Set());
+  const [expandedEmpty, setExpandedEmpty] = React.useState<Set<string>>(new Set());
   const [showArchived, setShowArchived] = React.useState(false);
   const [dragging, setDragging] = React.useState<string | null>(null);
   const [dropTarget, setDropTarget] = React.useState<string | null>(null);
@@ -106,6 +107,8 @@ export function WorkspaceTree({ items, weekLabel }: { items: WorkspaceItem[]; we
       // Restoring a persisted UI preference after hydration is an external-store sync.
       // eslint-disable-next-line react-hooks/set-state-in-effect
       if (stored) setCollapsed(new Set(JSON.parse(stored) as string[]));
+      const storedEmpty = localStorage.getItem("kairos:expanded-empty-items");
+      if (storedEmpty) setExpandedEmpty(new Set(JSON.parse(storedEmpty) as string[]));
     } catch {
       // ignore
     }
@@ -115,6 +118,15 @@ export function WorkspaceTree({ items, weekLabel }: { items: WorkspaceItem[]; we
     setCollapsed(next);
     try {
       localStorage.setItem("kairos:collapsed-items", JSON.stringify(Array.from(next)));
+    } catch {
+      // ignore
+    }
+  };
+
+  const persistExpandedEmpty = (next: Set<string>) => {
+    setExpandedEmpty(next);
+    try {
+      localStorage.setItem("kairos:expanded-empty-items", JSON.stringify(Array.from(next)));
     } catch {
       // ignore
     }
@@ -151,6 +163,13 @@ export function WorkspaceTree({ items, weekLabel }: { items: WorkspaceItem[]; we
     if (next.has(id)) next.delete(id);
     else next.add(id);
     persistCollapsed(next);
+  };
+
+  const toggleEmpty = (id: string) => {
+    const next = new Set(expandedEmpty);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    persistExpandedEmpty(next);
   };
 
   const move = (id: string, parentId: string | null) => {
@@ -270,8 +289,8 @@ export function WorkspaceTree({ items, weekLabel }: { items: WorkspaceItem[]; we
 
   const renderNode = (node: Node): React.ReactNode => {
     if (searchVisible && !searchVisible.has(node.id)) return null;
-    const isCollapsed = searchVisible ? false : collapsed.has(node.id);
     const hasChildren = node.children.length > 0;
+    const isCollapsed = searchVisible ? false : hasChildren ? collapsed.has(node.id) : !expandedEmpty.has(node.id);
     const isDrop = dropTarget === node.id;
 
     return (
@@ -306,12 +325,10 @@ export function WorkspaceTree({ items, weekLabel }: { items: WorkspaceItem[]; we
           <div className="flex min-w-0 items-center gap-1" style={{ paddingLeft: node.depth * 16 }}>
             <button
               type="button"
-              onClick={() => hasChildren && toggle(node.id)}
-              className={cn(
-                "grid h-5 w-5 shrink-0 place-items-center rounded text-muted-2",
-                hasChildren ? "hover:bg-surface-3 hover:text-text" : "opacity-0",
-              )}
-              aria-label={isCollapsed ? "Expand" : "Collapse"}
+              onClick={() => (hasChildren ? toggle(node.id) : toggleEmpty(node.id))}
+              className="grid h-5 w-5 shrink-0 place-items-center rounded text-muted-2 hover:bg-surface-3 hover:text-text"
+              aria-label={`${isCollapsed ? "Expand" : "Collapse"} ${node.name}`}
+              aria-expanded={!isCollapsed}
             >
               {isCollapsed ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
             </button>
@@ -429,7 +446,7 @@ export function WorkspaceTree({ items, weekLabel }: { items: WorkspaceItem[]; we
             </DropdownMenu>
           </div>
         </div>
-        {hasChildren && !isCollapsed ? (
+        {!isCollapsed ? (
           <div>
             {node.children.map(renderNode)}
             {renderAddRow(node.id, node.depth + 1)}
