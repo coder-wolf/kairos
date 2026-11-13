@@ -6,22 +6,16 @@ const APP_PREFIXES = ["/dashboard", "/workspace", "/items", "/goals", "/analytic
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const isAppRoute = APP_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
-  const isAuthRoute = pathname === "/login" || pathname === "/signup";
 
-  if (!isAppRoute && !isAuthRoute) {
+  if (!isAppRoute) {
     return NextResponse.next();
   }
 
   const token = request.cookies.get("kairos_session")?.value;
   const session = await decrypt(token);
 
-  if (isAppRoute && !session) {
-    const url = new URL("/login", request.url);
-    return NextResponse.redirect(url);
-  }
-
-  if (isAuthRoute && session) {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
+  if (!session) {
+    return NextResponse.redirect(new URL("/login", request.url));
   }
 
   return NextResponse.next();

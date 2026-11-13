@@ -20,7 +20,7 @@ export const getCurrentUser = cache(async () => {
     where: { id: userId },
     include: { workspace: true },
   });
-  if (!user?.workspace) redirect("/login");
+  if (!user?.workspace) redirect("/api/auth/clear");
   return user;
 });
 
