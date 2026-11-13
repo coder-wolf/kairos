@@ -1,0 +1,157 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  timezone     String   @default("UTC")
+  weekStartsOn Int      @default(1)
+  theme        String   @default("system")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  workspace    Workspace?
+  timeSessions TimeSession[]
+  timer        TimerState?
+}
+
+model Workspace {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  name      String
+  icon      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items        Item[]
+  goals        Goal[]
+  timeSessions TimeSession[]
+}
+
+enum ItemType {
+  AREA
+  PROJECT
+  CUSTOM
+}
+
+model Item {
+  id          String    @id @default(cuid())
+  workspaceId String
+  parentId    String?
+  name        String
+  type        ItemType?
+  description String?
+  icon        String?
+  color       String?
+  sortOrder   Int       @default(0)
+  isSystem    Boolean   @default(false)
+  archivedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  workspace    Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  parent       Item?          @relation("ItemHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  children     Item[]         @relation("ItemHierarchy")
+  goals        Goal[]
+  timeSessions TimeSession[]
+  timers       TimerState[]
+
+  @@index([workspaceId, parentId, sortOrder])
+  @@index([workspaceId, archivedAt])
+  @@index([workspaceId, isSystem])
+}
+
+enum PeriodType {
+  DAILY
+  WEEKLY
+  MONTHLY
+  CUSTOM
+}
+
+enum GoalStatus {
+  ACTIVE
+  PAUSED
+  ARCHIVED
+}
+
+model Goal {
+  id             String     @id @default(cuid())
+  workspaceId    String
+  itemId         String
+  name           String
+  targetSeconds  Int
+  periodType     PeriodType
+  daysOfWeek     Int[]      @default([])
+  startDate      DateTime
+  endDate        DateTime?
+  targetHistory  Json       @default("[]")
+  status         GoalStatus @default(ACTIVE)
+  reminder       Boolean    @default(false)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  item      Item      @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, status])
+  @@index([itemId])
+}
+
+enum SessionSource {
+  TIMER
+  MANUAL
+  POMODORO
+}
+
+model TimeSession {
+  id              String        @id @default(cuid())
+  userId          String
+  workspaceId     String
+  itemId          String
+  startTime       DateTime
+  endTime         DateTime
+  durationSeconds Int
+  description     String?
+  source          SessionSource @default(MANUAL)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  item      Item      @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@index([userId, startTime])
+  @@index([workspaceId, itemId, startTime])
+  @@index([workspaceId, startTime])
+}
+
+enum TimerStatus {
+  RUNNING
+  PAUSED
+}
+
+model TimerState {
+  id                String        @id @default(cuid())
+  userId            String        @unique
+  itemId            String
+  status            TimerStatus   @default(RUNNING)
+  startedAt         DateTime
+  sessionStartedAt  DateTime
+  accumulatedSeconds Int          @default(0)
+  description       String?
+  source            SessionSource @default(TIMER)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  item Item @relation(fields: [itemId], references: [id], onDelete: Cascade)
+}
