@@ -88,6 +88,7 @@ export function WorkspaceTree({ items, weekLabel }: { items: WorkspaceItem[]; we
   const [query, setQuery] = React.useState("");
   const [addingTo, setAddingTo] = React.useState<string | null | undefined>(undefined);
   const [newName, setNewName] = React.useState("");
+  const [newType, setNewType] = React.useState<"AREA" | "PROJECT">("PROJECT");
   const [addError, setAddError] = React.useState<string | null>(null);
   const [addPending, startAddTransition] = React.useTransition();
   const [collapsed, setCollapsed] = React.useState<Set<string>>(new Set());
@@ -131,6 +132,11 @@ export function WorkspaceTree({ items, weekLabel }: { items: WorkspaceItem[]; we
       // ignore
     }
   };
+
+  const draggingTree = React.useMemo(
+    () => (dragging ? descendantIds(items, dragging) : null),
+    [dragging, items],
+  );
 
   const activeItems = items.filter((item) => !item.archivedAt);
   const archivedItems = items.filter((item) => item.archivedAt);
@@ -191,12 +197,14 @@ export function WorkspaceTree({ items, weekLabel }: { items: WorkspaceItem[]; we
   const startAdding = (parentId: string | null) => {
     setAddingTo(parentId);
     setNewName("");
+    setNewType("PROJECT");
     setAddError(null);
   };
 
   const cancelAdding = () => {
     setAddingTo(undefined);
     setNewName("");
+    setNewType("PROJECT");
     setAddError(null);
   };
 
@@ -205,7 +213,7 @@ export function WorkspaceTree({ items, weekLabel }: { items: WorkspaceItem[]; we
     if (!name || addPending) return;
     setAddError(null);
     startAddTransition(async () => {
-      const result = await createItem({ name, type: "PROJECT", parentId });
+      const result = await createItem({ name, type: newType, parentId });
       if (!result.ok) {
         setAddError(result.error);
         return;
@@ -244,18 +252,41 @@ export function WorkspaceTree({ items, weekLabel }: { items: WorkspaceItem[]; we
                     cancelAdding();
                   }
                 }}
-                placeholder="Project name"
+                placeholder="Name"
                 maxLength={80}
                 disabled={addPending}
-                aria-label="New project name"
+                aria-label="New item name"
                 className="h-8 w-full min-w-0 bg-transparent text-[12px] font-medium outline-none placeholder:text-muted-2"
               />
               {addPending ? <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-primary" /> : null}
             </div>
+            <div
+              role="group"
+              aria-label="Item type"
+              className="flex h-8 shrink-0 items-center gap-0.5 rounded-lg border border-border bg-surface-2 p-0.5"
+            >
+              {(["PROJECT", "AREA"] as const).map((type) => (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => setNewType(type)}
+                  aria-pressed={newType === type}
+                  disabled={addPending}
+                  className={cn(
+                    "h-6 rounded-md px-2 text-[10px] font-bold transition-colors disabled:opacity-60",
+                    newType === type
+                      ? "bg-primary text-primary-contrast"
+                      : "text-muted hover:bg-surface-3 hover:text-text",
+                  )}
+                >
+                  {type === "AREA" ? "Area" : "Project"}
+                </button>
+              ))}
+            </div>
             <button
               type="submit"
               disabled={!newName.trim() || addPending}
-              aria-label="Create project"
+              aria-label={`Create ${newType === "AREA" ? "area" : "project"}`}
               className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-primary text-primary-contrast transition-colors hover:bg-primary-hover disabled:pointer-events-none disabled:opacity-40"
             >
               <Check className="h-3.5 w-3.5" />
@@ -291,7 +322,8 @@ export function WorkspaceTree({ items, weekLabel }: { items: WorkspaceItem[]; we
     if (searchVisible && !searchVisible.has(node.id)) return null;
     const hasChildren = node.children.length > 0;
     const isCollapsed = searchVisible ? false : hasChildren ? collapsed.has(node.id) : !expandedEmpty.has(node.id);
-    const isDrop = dropTarget === node.id;
+    const cannotDrop = draggingTree?.has(node.id) ?? false;
+    const isDrop = dropTarget === node.id && !cannotDrop;
 
     return (
       <div key={node.id}>
@@ -307,18 +339,21 @@ export function WorkspaceTree({ items, weekLabel }: { items: WorkspaceItem[]; we
             setDropTarget(null);
           }}
           onDragOver={(event) => {
-            if (!dragging || dragging === node.id) return;
+            if (!dragging || cannotDrop) {
+              if (dropTarget === node.id) setDropTarget(null);
+              return;
+            }
             event.preventDefault();
             setDropTarget(node.id);
           }}
           onDragLeave={() => setDropTarget((current) => (current === node.id ? null : current))}
           onDrop={(event) => {
             event.preventDefault();
-            if (dragging && dragging !== node.id) move(dragging, node.id);
+            if (dragging && !cannotDrop) move(dragging, node.id);
           }}
           className={cn(
-            "group grid grid-cols-[minmax(0,1fr)_84px_60px_72px_118px_104px] items-center gap-2 border-b border-border/70 px-3 py-2 transition-colors last:border-b-0",
-            isDrop ? "bg-primary-soft ring-1 ring-inset ring-primary/30" : "hover:bg-surface-2/50",
+            "group relative grid grid-cols-[minmax(0,1fr)_84px_60px_72px_118px_104px] items-center gap-2 border-b border-border/70 px-3 py-2 transition-colors last:border-b-0",
+            isDrop ? "bg-primary-soft" : "hover:bg-surface-2/50",
             dragging === node.id && "opacity-40",
           )}
         >
@@ -445,6 +480,15 @@ export function WorkspaceTree({ items, weekLabel }: { items: WorkspaceItem[]; we
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
+          {isDrop ? (
+            <span
+              aria-hidden
+              className="pointer-events-none absolute bottom-0 z-10 h-0.5 rounded-full bg-primary"
+              style={{ left: 12 + (node.depth + 1) * 16, right: 12 }}
+            >
+              <span className="absolute -left-0.5 top-1/2 h-2 w-2 -translate-y-1/2 rounded-full bg-primary" />
+            </span>
+          ) : null}
         </div>
         {!isCollapsed ? (
           <div>
