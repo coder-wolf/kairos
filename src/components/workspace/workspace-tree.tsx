@@ -23,7 +23,7 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
-import { archiveItem, createItem, deleteItem, moveItem, restoreItem } from "@/app/actions/items";
+import { archiveItem, createItem, deleteItem, moveItem, restoreItem, updateItem } from "@/app/actions/items";
 import { ConfirmDialog } from "@/components/dialogs/confirm-dialog";
 import { useQuickActions } from "@/components/quick-actions";
 import { LiveTimer } from "@/components/timer/live-timer";
@@ -83,7 +83,7 @@ function typeLabel(type: string | null) {
 
 export function WorkspaceTree({ items, weekLabel }: { items: WorkspaceItem[]; weekLabel: string }) {
   const router = useRouter();
-  const { openNewItem, openEditItem, openManualTime, openNewGoal } = useQuickActions();
+  const { openNewItem, openManualTime, openNewGoal } = useQuickActions();
   const { start, timer } = useTimer();
   const [query, setQuery] = React.useState("");
   const [addingTo, setAddingTo] = React.useState<string | null | undefined>(undefined);
@@ -91,6 +91,11 @@ export function WorkspaceTree({ items, weekLabel }: { items: WorkspaceItem[]; we
   const [newType, setNewType] = React.useState<"AREA" | "PROJECT">("PROJECT");
   const [addError, setAddError] = React.useState<string | null>(null);
   const [addPending, startAddTransition] = React.useTransition();
+  const [editingId, setEditingId] = React.useState<string | null>(null);
+  const [editName, setEditName] = React.useState("");
+  const [editType, setEditType] = React.useState<"AREA" | "PROJECT" | "CUSTOM">("PROJECT");
+  const [editError, setEditError] = React.useState<string | null>(null);
+  const [editPending, startEditTransition] = React.useTransition();
   const [collapsed, setCollapsed] = React.useState<Set<string>>(new Set());
   const [expandedEmpty, setExpandedEmpty] = React.useState<Set<string>>(new Set());
   const [showArchived, setShowArchived] = React.useState(false);
@@ -205,6 +210,8 @@ export function WorkspaceTree({ items, weekLabel }: { items: WorkspaceItem[]; we
     setNewName("");
     setNewType("PROJECT");
     setAddError(null);
+    setEditingId(null);
+    setEditError(null);
   };
 
   const cancelAdding = () => {
@@ -212,6 +219,46 @@ export function WorkspaceTree({ items, weekLabel }: { items: WorkspaceItem[]; we
     setNewName("");
     setNewType("PROJECT");
     setAddError(null);
+  };
+
+  const startEditing = (node: Node) => {
+    setEditingId(node.id);
+    setEditName(node.name);
+    setEditType(node.type === "AREA" || node.type === "CUSTOM" ? node.type : "PROJECT");
+    setEditError(null);
+    setAddingTo(undefined);
+    setNewName("");
+    setAddError(null);
+  };
+
+  const cancelEditing = () => {
+    setEditingId(null);
+    setEditName("");
+    setEditError(null);
+  };
+
+  const saveInline = (node: Node) => {
+    const name = editName.trim();
+    if (!name || editPending) return;
+    setEditError(null);
+    startEditTransition(async () => {
+      const result = await updateItem({
+        id: node.id,
+        name,
+        type: editType,
+        parentId: node.parentId,
+        description: node.description ?? undefined,
+        color: node.color,
+        icon: node.icon,
+      });
+      if (!result.ok) {
+        setEditError(result.error);
+        return;
+      }
+      toast.success("Item updated");
+      setEditingId(null);
+      router.refresh();
+    });
   };
 
   const createInline = (parentId: string | null) => {
@@ -335,6 +382,84 @@ export function WorkspaceTree({ items, weekLabel }: { items: WorkspaceItem[]; we
 
     return (
       <div key={node.id}>
+        {editingId === node.id ? (
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              saveInline(node);
+            }}
+            className="border-b border-border/70 last:border-b-0"
+          >
+            <div
+              className="flex flex-wrap items-center gap-1.5 px-3 py-1.5"
+              style={{ paddingLeft: node.depth * 16 + 12 }}
+            >
+              <div className="flex h-8 min-w-0 flex-1 items-center gap-2 rounded-lg border border-primary/40 bg-surface px-2 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/15">
+                <Pencil className="h-3 w-3 shrink-0 text-primary" />
+                <input
+                  autoFocus
+                  value={editName}
+                  onChange={(event) => setEditName(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Escape") {
+                      event.preventDefault();
+                      cancelEditing();
+                    }
+                  }}
+                  placeholder="Name"
+                  maxLength={80}
+                  disabled={editPending}
+                  aria-label={`Edit name for ${node.name}`}
+                  className="h-8 w-full min-w-0 bg-transparent text-[12px] font-medium outline-none placeholder:text-muted-2"
+                />
+                {editPending ? <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-primary" /> : null}
+              </div>
+              <div
+                role="group"
+                aria-label={`Type for ${node.name}`}
+                className="flex h-8 shrink-0 items-center gap-0.5 rounded-lg border border-border bg-surface-2 p-0.5"
+              >
+                {(node.type === "CUSTOM"
+                  ? (["PROJECT", "AREA", "CUSTOM"] as const)
+                  : (["PROJECT", "AREA"] as const)
+                ).map((type) => (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() => setEditType(type)}
+                    aria-pressed={editType === type}
+                    disabled={editPending}
+                    className={cn(
+                      "h-6 rounded-md px-2 text-[10px] font-bold transition-colors disabled:opacity-60",
+                      editType === type
+                        ? "bg-primary text-primary-contrast"
+                        : "text-muted hover:bg-surface-3 hover:text-text",
+                    )}
+                  >
+                    {typeLabel(type)}
+                  </button>
+                ))}
+              </div>
+              <button
+                type="submit"
+                disabled={!editName.trim() || editPending}
+                aria-label={`Save changes to ${node.name}`}
+                className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-primary text-primary-contrast transition-colors hover:bg-primary-hover disabled:pointer-events-none disabled:opacity-40"
+              >
+                <Check className="h-3.5 w-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={cancelEditing}
+                aria-label={`Cancel editing ${node.name}`}
+                className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-muted-2 transition-colors hover:bg-surface-2 hover:text-text"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+              {editError ? <p className="w-full text-[10px] font-medium text-danger">{editError}</p> : null}
+            </div>
+          </form>
+        ) : (
         <div
           draggable
           onDragStart={(event) => {
@@ -487,7 +612,7 @@ export function WorkspaceTree({ items, weekLabel }: { items: WorkspaceItem[]; we
                 <DropdownMenuItem onSelect={() => openNewItem(node.id)}>
                   <FolderPlus className="h-4 w-4" /> New child project
                 </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => openEditItem(node.id)}>
+                <DropdownMenuItem onSelect={() => startEditing(node)}>
                   <Pencil className="h-4 w-4" /> Edit details
                 </DropdownMenuItem>
                 <DropdownMenuItem
@@ -523,6 +648,7 @@ export function WorkspaceTree({ items, weekLabel }: { items: WorkspaceItem[]; we
             </span>
           ) : null}
         </div>
+        )}
         {!isCollapsed ? (
           <div>
             {node.children.map(renderNode)}
