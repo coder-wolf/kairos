@@ -6,6 +6,8 @@ Kairos is a personal productivity workspace built around a simple idea: **if som
 
 It combines flexible project organization, frictionless time tracking, independent time-based goals, habit streaks, Pomodoro focus blocks, a weekly time-blocking calendar, and calm analytics into one polished workspace — dark by default.
 
+**[Live demo →](https://kairos-lime-three.vercel.app)** · `demo@kairos.app` / `demo1234`
+
 <p>
   <img alt="Next.js" src="https://img.shields.io/badge/Next.js-16-000?logo=nextdotjs&logoColor=white" />
   <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white" />
@@ -145,7 +147,9 @@ pnpm dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
-### Demo account
+### Live demo
+
+**https://kairos-lime-three.vercel.app**
 
 ```text
 Email:    demo@kairos.app
