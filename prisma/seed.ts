@@ -40,7 +40,7 @@ async function main() {
       passwordHash,
       timezone: TZ,
       weekStartsOn: 1,
-      theme: "light",
+      theme: "dark",
       workspace: {
         create: {
           name: "Alex's Workspace",

@@ -90,7 +90,7 @@ export async function signup(_state: AuthState, formData: FormData): Promise<Aut
   });
 
   await createSession(user.id);
-  await setThemeCookie("system");
+  await setThemeCookie("dark");
   redirect("/dashboard?welcome=1");
 }
 

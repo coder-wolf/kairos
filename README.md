@@ -4,7 +4,7 @@
 
 Kairos is a personal productivity workspace built around a simple idea: **if something matters, give it time, track that time, and watch your consistency add up.**
 
-It combines flexible project organization, frictionless time tracking, independent time-based goals, habit streaks, Pomodoro focus blocks, a weekly time-blocking calendar, and calm analytics into one polished workspace.
+It combines flexible project organization, frictionless time tracking, independent time-based goals, habit streaks, Pomodoro focus blocks, a weekly time-blocking calendar, and calm analytics into one polished workspace — dark by default.
 
 <p>
   <img alt="Next.js" src="https://img.shields.io/badge/Next.js-16-000?logo=nextdotjs&logoColor=white" />
@@ -102,7 +102,7 @@ Time distribution, daily/weekly/monthly trends, weekday rhythm, time-of-day patt
 - Item-level analytics with drill-down
 
 ### Platform
-- Light, dark, and system themes
+- **Dark mode by default**, with light and system themes
 - Responsive layouts for desktop, tablet, and mobile
 - Command palette (`⌘K` / `Ctrl+K`)
 - Accessible dialogs and menus with Radix UI

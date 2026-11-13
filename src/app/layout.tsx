@@ -45,7 +45,7 @@ export const viewport: Viewport = {
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   const cookieStore = await cookies();
   const storedTheme = cookieStore.get("kairos_theme")?.value;
-  const theme = storedTheme === "light" || storedTheme === "dark" || storedTheme === "system" ? storedTheme : "system";
+  const theme = storedTheme === "light" || storedTheme === "dark" || storedTheme === "system" ? storedTheme : "dark";
 
   return (
     <html

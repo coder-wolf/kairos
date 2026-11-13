@@ -14,7 +14,7 @@ model User {
   passwordHash String
   timezone     String   @default("UTC")
   weekStartsOn Int      @default(1)
-  theme        String   @default("system")
+  theme        String   @default("dark")
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
