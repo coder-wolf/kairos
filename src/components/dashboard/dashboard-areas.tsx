@@ -31,7 +31,7 @@ function buildTree(nodes: AreaNode[]): Node[] {
 export function DashboardAreas({ nodes }: { nodes: AreaNode[] }) {
   const { start } = useTimer();
   const [expanded, setExpanded] = React.useState<Set<string>>(new Set());
-  const tree = React.useMemo(() => buildTree(nodes).filter((node) => node.seconds > 0), [nodes]);
+  const tree = React.useMemo(() => buildTree(nodes), [nodes]);
   const maxSeconds = Math.max(1, ...tree.map((node) => node.seconds));
 
   const toggle = (id: string) => {
