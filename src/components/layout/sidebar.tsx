@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -95,6 +96,7 @@ export function SidebarContent({
   const { openNewItem, openManualTime } = useQuickActions();
   const { timer, elapsed, pending, pause, resume, stop, openChangeItem, start, openWindow } = useTimer();
   const pomodoro = usePomodoro();
+  const [loggingOut, startLogout] = React.useTransition();
 
   const primary = [
     { href: "/dashboard", label: "Home", icon: House },
@@ -287,13 +289,12 @@ export function SidebarContent({
               </a>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <form action={logout}>
-              <DropdownMenuItem asChild>
-                <button type="submit" className="w-full">
-                  <LogOut className="h-4 w-4" /> Log out
-                </button>
-              </DropdownMenuItem>
-            </form>
+            <DropdownMenuItem
+              onSelect={() => startLogout(() => logout())}
+              disabled={loggingOut}
+            >
+              <LogOut className="h-4 w-4" /> {loggingOut ? "Logging out…" : "Log out"}
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
