@@ -52,7 +52,7 @@ const PRO_FEATURES = [
   "Unlimited active goals and habits",
   "Pomodoro focus blocks and floating timer",
   "Advanced analytics and item reports",
-  "Full history, export, and command palette",
+  "All future Pro features",
 ];
 
 export default async function BillingPage({
