@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import { archiveItem, deleteItem, moveItem, restoreItem } from "@/app/actions/items";
 import { ConfirmDialog } from "@/components/dialogs/confirm-dialog";
 import { useQuickActions } from "@/components/quick-actions";
+import { LiveTimer } from "@/components/timer/live-timer";
 import { useTimer } from "@/components/timer/timer-provider";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -67,10 +68,14 @@ export function ItemActions({ item, items }: { item: ItemOption; items: ItemOpti
         </Button>
       ) : (
         <>
-          <Button onClick={() => start(item.id)} className="gap-2">
-            <Play className="h-3.5 w-3.5 fill-current" />
-            {timer?.itemId === item.id ? "Open timer" : "Start timer"}
-          </Button>
+          {timer?.itemId === item.id ? (
+            <LiveTimer itemId={item.id} name={item.name} variant="button" showLabel />
+          ) : (
+            <Button onClick={() => start(item.id)} className="gap-2">
+              <Play className="h-3.5 w-3.5 fill-current" />
+              Start timer
+            </Button>
+          )}
           <Button variant="outline" onClick={() => openManualTime({ itemId: item.id })} className="gap-2">
             <ClockPlus className="h-4 w-4" /> Add time
           </Button>

@@ -3,6 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { ArrowRight, ChevronRight, Play, Target } from "lucide-react";
+import { LiveTimer } from "@/components/timer/live-timer";
 import { useTimer } from "@/components/timer/timer-provider";
 import type { AreaNode } from "@/lib/types";
 import { cn, formatDuration, pluralize } from "@/lib/utils";
@@ -29,7 +30,7 @@ function buildTree(nodes: AreaNode[]): Node[] {
 }
 
 export function DashboardAreas({ nodes }: { nodes: AreaNode[] }) {
-  const { start } = useTimer();
+  const { start, timer } = useTimer();
   const [expanded, setExpanded] = React.useState<Set<string>>(new Set());
   const tree = React.useMemo(() => buildTree(nodes), [nodes]);
   const maxSeconds = Math.max(1, ...tree.map((node) => node.seconds));
@@ -101,16 +102,20 @@ export function DashboardAreas({ nodes }: { nodes: AreaNode[] }) {
               ) : null}
             </span>
           </button>
-          <button
-            type="button"
-            onClick={() => start(node.id)}
-            className="flex h-7 shrink-0 items-center gap-1 rounded-full border border-primary/15 bg-primary-soft px-2.5 text-[10px] font-bold text-primary transition-colors hover:bg-primary hover:text-primary-contrast"
-            aria-label={`Start timer for ${node.name}`}
-            title={`Start a timer for ${node.name}`}
-          >
-            <Play className="h-2.5 w-2.5 fill-current" />
-            Track
-          </button>
+          {timer?.itemId === node.id ? (
+            <LiveTimer itemId={node.id} name={node.name} />
+          ) : (
+            <button
+              type="button"
+              onClick={() => start(node.id)}
+              className="flex h-7 shrink-0 items-center gap-1 rounded-full border border-primary/15 bg-primary-soft px-2.5 text-[10px] font-bold text-primary transition-colors hover:bg-primary hover:text-primary-contrast"
+              aria-label={`Start timer for ${node.name}`}
+              title={`Start a timer for ${node.name}`}
+            >
+              <Play className="h-2.5 w-2.5 fill-current" />
+              Track
+            </button>
+          )}
           <Link
             href={`/items/${node.id}`}
             className="grid h-7 w-7 shrink-0 place-items-center rounded-md text-muted-2 transition-colors hover:bg-surface-2 hover:text-text"

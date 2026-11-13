@@ -4,24 +4,29 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
+  Check,
   ChevronDown,
   ChevronRight,
   ClockPlus,
   FolderPlus,
   MoreHorizontal,
+  Loader2,
   Pencil,
   Play,
+  Plus,
   Search,
   Target,
   Trash2,
   Undo2,
   Archive,
   MoveRight,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
-import { archiveItem, deleteItem, moveItem, restoreItem } from "@/app/actions/items";
+import { archiveItem, createItem, deleteItem, moveItem, restoreItem } from "@/app/actions/items";
 import { ConfirmDialog } from "@/components/dialogs/confirm-dialog";
 import { useQuickActions } from "@/components/quick-actions";
+import { LiveTimer } from "@/components/timer/live-timer";
 import { useTimer } from "@/components/timer/timer-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button, IconButton } from "@/components/ui/button";
@@ -79,8 +84,12 @@ function typeLabel(type: string | null) {
 export function WorkspaceTree({ items, weekLabel }: { items: WorkspaceItem[]; weekLabel: string }) {
   const router = useRouter();
   const { openNewItem, openEditItem, openManualTime, openNewGoal } = useQuickActions();
-  const { start } = useTimer();
+  const { start, timer } = useTimer();
   const [query, setQuery] = React.useState("");
+  const [addingTo, setAddingTo] = React.useState<string | null | undefined>(undefined);
+  const [newName, setNewName] = React.useState("");
+  const [addError, setAddError] = React.useState<string | null>(null);
+  const [addPending, startAddTransition] = React.useTransition();
   const [collapsed, setCollapsed] = React.useState<Set<string>>(new Set());
   const [showArchived, setShowArchived] = React.useState(false);
   const [dragging, setDragging] = React.useState<string | null>(null);
@@ -160,6 +169,105 @@ export function WorkspaceTree({ items, weekLabel }: { items: WorkspaceItem[]; we
 
   const maxSeconds = Math.max(1, ...activeItems.map((item) => item.seconds));
 
+  const startAdding = (parentId: string | null) => {
+    setAddingTo(parentId);
+    setNewName("");
+    setAddError(null);
+  };
+
+  const cancelAdding = () => {
+    setAddingTo(undefined);
+    setNewName("");
+    setAddError(null);
+  };
+
+  const createInline = (parentId: string | null) => {
+    const name = newName.trim();
+    if (!name || addPending) return;
+    setAddError(null);
+    startAddTransition(async () => {
+      const result = await createItem({ name, type: "PROJECT", parentId });
+      if (!result.ok) {
+        setAddError(result.error);
+        return;
+      }
+      toast.success(`Added ${name}`);
+      setNewName("");
+      setAddingTo(undefined);
+      router.refresh();
+    });
+  };
+
+  const renderAddRow = (parentId: string | null, depth: number, label = "Add project") => {
+    if (query.trim()) return null;
+    const isAdding = addingTo === parentId;
+
+    return (
+      <div className="border-b border-border/70 px-3 py-1.5 last:border-b-0">
+        {isAdding ? (
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              createInline(parentId);
+            }}
+            className="flex flex-wrap items-center gap-1.5"
+            style={{ paddingLeft: depth * 16 + 6 }}
+          >
+            <div className="flex h-8 min-w-0 flex-1 items-center gap-2 rounded-lg border border-primary/40 bg-surface px-2 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/15">
+              <Plus className="h-3 w-3 shrink-0 text-primary" />
+              <input
+                autoFocus
+                value={newName}
+                onChange={(event) => setNewName(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Escape") {
+                    event.preventDefault();
+                    cancelAdding();
+                  }
+                }}
+                placeholder="Project name"
+                maxLength={80}
+                disabled={addPending}
+                aria-label="New project name"
+                className="h-8 w-full min-w-0 bg-transparent text-[12px] font-medium outline-none placeholder:text-muted-2"
+              />
+              {addPending ? <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-primary" /> : null}
+            </div>
+            <button
+              type="submit"
+              disabled={!newName.trim() || addPending}
+              aria-label="Create project"
+              className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-primary text-primary-contrast transition-colors hover:bg-primary-hover disabled:pointer-events-none disabled:opacity-40"
+            >
+              <Check className="h-3.5 w-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={cancelAdding}
+              aria-label="Cancel adding project"
+              className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-muted-2 transition-colors hover:bg-surface-2 hover:text-text"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+            {addError ? <p className="w-full text-[10px] font-medium text-danger">{addError}</p> : null}
+          </form>
+        ) : (
+          <button
+            type="button"
+            onClick={() => startAdding(parentId)}
+            className="flex h-7 items-center gap-2 rounded-md pr-2 text-[11px] font-semibold text-muted-2 transition-colors hover:bg-surface-2 hover:text-primary"
+            style={{ paddingLeft: depth * 16 + 6 }}
+          >
+            <span className="grid h-5 w-5 place-items-center rounded-md border border-dashed border-border-strong text-muted-2">
+              <Plus className="h-3 w-3" />
+            </span>
+            {label}
+          </button>
+        )}
+      </div>
+    );
+  };
+
   const renderNode = (node: Node): React.ReactNode => {
     if (searchVisible && !searchVisible.has(node.id)) return null;
     const isCollapsed = searchVisible ? false : collapsed.has(node.id);
@@ -190,7 +298,7 @@ export function WorkspaceTree({ items, weekLabel }: { items: WorkspaceItem[]; we
             if (dragging && dragging !== node.id) move(dragging, node.id);
           }}
           className={cn(
-            "group grid grid-cols-[minmax(0,1fr)_84px_60px_72px_118px_70px] items-center gap-2 border-b border-border/70 px-3 py-2 transition-colors last:border-b-0",
+            "group grid grid-cols-[minmax(0,1fr)_84px_60px_72px_118px_104px] items-center gap-2 border-b border-border/70 px-3 py-2 transition-colors last:border-b-0",
             isDrop ? "bg-primary-soft ring-1 ring-inset ring-primary/30" : "hover:bg-surface-2/50",
             dragging === node.id && "opacity-40",
           )}
@@ -262,15 +370,19 @@ export function WorkspaceTree({ items, weekLabel }: { items: WorkspaceItem[]; we
             )}
           </div>
           <div className="flex justify-end gap-0.5">
-            <IconButton
-              size="icon-sm"
-              variant="ghost"
-              className="h-7 w-7 opacity-100 md:opacity-0 md:group-hover:opacity-100"
-              onClick={() => start(node.id)}
-              aria-label={`Start timer for ${node.name}`}
-            >
-              <Play className="h-3.5 w-3.5" />
-            </IconButton>
+            {timer?.itemId === node.id ? (
+              <LiveTimer itemId={node.id} name={node.name} variant="compact" />
+            ) : (
+              <IconButton
+                size="icon-sm"
+                variant="ghost"
+                className="h-7 w-7 opacity-100 md:opacity-0 md:group-hover:opacity-100"
+                onClick={() => start(node.id)}
+                aria-label={`Start timer for ${node.name}`}
+              >
+                <Play className="h-3.5 w-3.5" />
+              </IconButton>
+            )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
@@ -317,7 +429,12 @@ export function WorkspaceTree({ items, weekLabel }: { items: WorkspaceItem[]; we
             </DropdownMenu>
           </div>
         </div>
-        {hasChildren && !isCollapsed ? <div>{node.children.map(renderNode)}</div> : null}
+        {hasChildren && !isCollapsed ? (
+          <div>
+            {node.children.map(renderNode)}
+            {renderAddRow(node.id, node.depth + 1)}
+          </div>
+        ) : null}
       </div>
     );
   };
@@ -399,7 +516,7 @@ export function WorkspaceTree({ items, weekLabel }: { items: WorkspaceItem[]; we
             </div>
             <div className="scroll-thin overflow-x-auto">
               <div className="min-w-[820px]">
-                <div className="grid grid-cols-[minmax(0,1fr)_84px_60px_72px_118px_70px] items-center gap-2 border-b border-border bg-surface-2/50 px-3 py-2 text-[9px] font-bold uppercase tracking-[0.14em] text-muted-2">
+                <div className="grid grid-cols-[minmax(0,1fr)_84px_60px_72px_118px_104px] items-center gap-2 border-b border-border bg-surface-2/50 px-3 py-2 text-[9px] font-bold uppercase tracking-[0.14em] text-muted-2">
                   <div>Item</div>
                   <div>Type</div>
                   <div className="text-center">Goals</div>
@@ -407,7 +524,10 @@ export function WorkspaceTree({ items, weekLabel }: { items: WorkspaceItem[]; we
                   <div className="text-right">This week</div>
                   <div />
                 </div>
-                <div>{tree.map(renderNode)}</div>
+                <div>
+                  {tree.map(renderNode)}
+                  {renderAddRow(null, 0, "Add top-level project")}
+                </div>
               </div>
             </div>
           </>

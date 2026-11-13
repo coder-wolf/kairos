@@ -3,6 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { ChevronDown, ChevronUp, Flame, Play, Target } from "lucide-react";
+import { LiveTimer } from "@/components/timer/live-timer";
 import { useTimer } from "@/components/timer/timer-provider";
 import { Progress } from "@/components/ui/progress";
 import { GOAL_STATUS_META } from "@/lib/goals";
@@ -39,7 +40,7 @@ function periodUnit(type: string) {
 }
 
 export function FocusGoals({ items }: { items: FocusGoalItem[] }) {
-  const { start } = useTimer();
+  const { start, timer } = useTimer();
   const [expanded, setExpanded] = React.useState(false);
   const visible = expanded ? items : items.slice(0, INITIAL_VISIBLE);
 
@@ -113,14 +114,18 @@ export function FocusGoals({ items }: { items: FocusGoalItem[] }) {
                     )}
                   </td>
                   <td className="px-1 py-2 text-right">
-                    <button
-                      type="button"
-                      onClick={() => start(item.goal.itemId)}
-                      className="grid h-6 w-6 place-items-center rounded-md text-muted-2 opacity-100 hover:bg-primary-soft hover:text-primary md:opacity-0 md:group-hover:opacity-100"
-                      aria-label={`Start timer for ${item.goal.name}`}
-                    >
-                      <Play className="h-3 w-3" />
-                    </button>
+                    {timer?.itemId === item.goal.itemId ? (
+                      <LiveTimer itemId={item.goal.itemId} name={item.goal.name} variant="tiny" />
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => start(item.goal.itemId)}
+                        className="grid h-6 w-6 place-items-center rounded-md text-muted-2 opacity-100 hover:bg-primary-soft hover:text-primary md:opacity-0 md:group-hover:opacity-100"
+                        aria-label={`Start timer for ${item.goal.name}`}
+                      >
+                        <Play className="h-3 w-3" />
+                      </button>
+                    )}
                   </td>
                 </tr>
               );

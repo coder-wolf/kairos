@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ChevronRight, FolderPlus, Play, Target } from "lucide-react";
 import { useQuickActions } from "@/components/quick-actions";
+import { LiveTimer } from "@/components/timer/live-timer";
 import { useTimer } from "@/components/timer/timer-provider";
 import { Button } from "@/components/ui/button";
 import { cn, formatDuration } from "@/lib/utils";
@@ -19,7 +20,7 @@ export type ChildRow = {
 };
 
 export function ItemChildren({ itemId, rows }: { itemId: string; rows: ChildRow[] }) {
-  const { start } = useTimer();
+  const { start, timer } = useTimer();
   const { openNewItem } = useQuickActions();
   const max = Math.max(1, ...rows.map((row) => row.seconds));
 
@@ -82,14 +83,18 @@ export function ItemChildren({ itemId, rows }: { itemId: string; rows: ChildRow[
               </span>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={() => start(row.id)}
-            className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-muted-2 opacity-0 transition-all hover:bg-primary-soft hover:text-primary group-hover:opacity-100"
-            aria-label={`Start timer for ${row.name}`}
-          >
-            <Play className="h-3.5 w-3.5" />
-          </button>
+          {timer?.itemId === row.id ? (
+            <LiveTimer itemId={row.id} name={row.name} variant="row" />
+          ) : (
+            <button
+              type="button"
+              onClick={() => start(row.id)}
+              className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-muted-2 opacity-0 transition-all hover:bg-primary-soft hover:text-primary group-hover:opacity-100"
+              aria-label={`Start timer for ${row.name}`}
+            >
+              <Play className="h-3.5 w-3.5" />
+            </button>
+          )}
           <Link
             href={`/items/${row.id}`}
             className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-muted-2 transition-colors hover:bg-surface-2 hover:text-text"

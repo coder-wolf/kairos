@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import { deleteGoal, setGoalStatus } from "@/app/actions/goals";
 import { ConfirmDialog } from "@/components/dialogs/confirm-dialog";
 import { useQuickActions } from "@/components/quick-actions";
+import { LiveTimer } from "@/components/timer/live-timer";
 import { useTimer } from "@/components/timer/timer-provider";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -131,14 +132,18 @@ export function GoalCard({
             </p>
           </div>
           <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={() => start(goal.itemId)}
-              className="grid h-7 w-7 place-items-center rounded-md text-muted-2 transition-colors hover:bg-primary-soft hover:text-primary"
-              title={timer?.itemId === goal.itemId ? "Timer already running" : "Start timer"}
-            >
-              <Play className="h-3.5 w-3.5" />
-            </button>
+            {timer?.itemId === goal.itemId ? (
+              <LiveTimer itemId={goal.itemId} name={goal.itemName} variant="compact" />
+            ) : (
+              <button
+                type="button"
+                onClick={() => start(goal.itemId)}
+                className="grid h-7 w-7 place-items-center rounded-md text-muted-2 transition-colors hover:bg-primary-soft hover:text-primary"
+                title="Start timer"
+              >
+                <Play className="h-3.5 w-3.5" />
+              </button>
+            )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
