@@ -95,7 +95,9 @@ export function WorkspaceTree({ items, weekLabel }: { items: WorkspaceItem[]; we
   const [expandedEmpty, setExpandedEmpty] = React.useState<Set<string>>(new Set());
   const [showArchived, setShowArchived] = React.useState(false);
   const [dragging, setDragging] = React.useState<string | null>(null);
-  const [dropTarget, setDropTarget] = React.useState<string | null>(null);
+  const [dropTarget, setDropTarget] = React.useState<
+    string | { id: string; mode: "before" | "after" | "inside" } | null
+  >(null);
   const [moving, setMoving] = React.useState<WorkspaceItem | null>(null);
   const [moveParent, setMoveParent] = React.useState("");
   const [toArchive, setToArchive] = React.useState<WorkspaceItem | null>(null);
@@ -178,9 +180,13 @@ export function WorkspaceTree({ items, weekLabel }: { items: WorkspaceItem[]; we
     persistExpandedEmpty(next);
   };
 
-  const move = (id: string, parentId: string | null) => {
+  const move = (
+    id: string,
+    parentId: string | null,
+    anchor?: { id: string; placement: "before" | "after" },
+  ) => {
     startMove(async () => {
-      const result = await moveItem(id, parentId);
+      const result = await moveItem(id, parentId, anchor);
       if (!result.ok) {
         toast.error(result.error);
         return;
@@ -323,7 +329,9 @@ export function WorkspaceTree({ items, weekLabel }: { items: WorkspaceItem[]; we
     const hasChildren = node.children.length > 0;
     const isCollapsed = searchVisible ? false : hasChildren ? collapsed.has(node.id) : !expandedEmpty.has(node.id);
     const cannotDrop = draggingTree?.has(node.id) ?? false;
-    const isDrop = dropTarget === node.id && !cannotDrop;
+    const itemDrop = dropTarget && typeof dropTarget === "object" ? dropTarget : null;
+    const isDrop = itemDrop?.id === node.id && !cannotDrop;
+    const dropMode = isDrop ? itemDrop.mode : null;
 
     return (
       <div key={node.id}>
@@ -340,20 +348,40 @@ export function WorkspaceTree({ items, weekLabel }: { items: WorkspaceItem[]; we
           }}
           onDragOver={(event) => {
             if (!dragging || cannotDrop) {
-              if (dropTarget === node.id) setDropTarget(null);
+              if (isDrop) setDropTarget(null);
               return;
             }
             event.preventDefault();
-            setDropTarget(node.id);
+            if (!isCollapsed) {
+              setDropTarget({ id: node.id, mode: "inside" });
+              return;
+            }
+            const rect = event.currentTarget.getBoundingClientRect();
+            setDropTarget({
+              id: node.id,
+              mode: event.clientY < rect.top + rect.height / 2 ? "before" : "after",
+            });
           }}
-          onDragLeave={() => setDropTarget((current) => (current === node.id ? null : current))}
+          onDragLeave={() =>
+            setDropTarget((current) => (typeof current === "object" && current?.id === node.id ? null : current))
+          }
           onDrop={(event) => {
             event.preventDefault();
-            if (dragging && !cannotDrop) move(dragging, node.id);
+            if (!dragging || cannotDrop) return;
+            if (!isCollapsed) {
+              move(dragging, node.id);
+              return;
+            }
+            const rect = event.currentTarget.getBoundingClientRect();
+            const before = event.clientY < rect.top + rect.height / 2;
+            move(dragging, node.parentId, {
+              id: node.id,
+              placement: before ? "before" : "after",
+            });
           }}
           className={cn(
             "group relative grid grid-cols-[minmax(0,1fr)_84px_60px_72px_118px_104px] items-center gap-2 border-b border-border/70 px-3 py-2 transition-colors last:border-b-0",
-            isDrop ? "bg-primary-soft" : "hover:bg-surface-2/50",
+            dropMode === "inside" ? "bg-primary-soft ring-1 ring-inset ring-primary/30" : "hover:bg-surface-2/50",
             dragging === node.id && "opacity-40",
           )}
         >
@@ -480,11 +508,16 @@ export function WorkspaceTree({ items, weekLabel }: { items: WorkspaceItem[]; we
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-          {isDrop ? (
+          {dropMode === "before" || dropMode === "after" ? (
             <span
               aria-hidden
-              className="pointer-events-none absolute bottom-0 z-10 h-0.5 rounded-full bg-primary"
-              style={{ left: 12 + (node.depth + 1) * 16, right: 12 }}
+              className="pointer-events-none absolute z-10 h-0.5 rounded-full bg-primary"
+              style={{
+                left: 12 + node.depth * 16,
+                right: 12,
+                top: dropMode === "before" ? -1 : undefined,
+                bottom: dropMode === "after" ? -1 : undefined,
+              }}
             >
               <span className="absolute -left-0.5 top-1/2 h-2 w-2 -translate-y-1/2 rounded-full bg-primary" />
             </span>
@@ -595,7 +628,7 @@ export function WorkspaceTree({ items, weekLabel }: { items: WorkspaceItem[]; we
         )}
 
         <div className="border-t border-border px-4 py-3 text-[10px] font-medium text-muted-2">
-          Drag an item onto another to nest it. Times show {weekLabel.toLowerCase()} totals, including descendants.
+          Drag between items to reorder. Drop onto an expanded item to nest inside it. Times show {weekLabel.toLowerCase()} totals, including descendants.
         </div>
       </div>
 

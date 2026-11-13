@@ -81,7 +81,11 @@ export async function updateItem(input: ItemInput): Promise<ActionResult> {
   return { ok: true, id: existing.id };
 }
 
-export async function moveItem(id: string, parentId: string | null): Promise<ActionResult> {
+export async function moveItem(
+  id: string,
+  parentId: string | null,
+  anchor?: { id: string; placement: "before" | "after" },
+): Promise<ActionResult> {
   const { workspace } = await requireWorkspace();
 
   const items = await db.item.findMany({ where: { workspaceId: workspace.id } });
@@ -99,14 +103,30 @@ export async function moveItem(id: string, parentId: string | null): Promise<Act
     }
   }
 
-  const siblings = await db.item.count({
+  const siblings = await db.item.findMany({
     where: { workspaceId: workspace.id, parentId, id: { not: id } },
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    select: { id: true },
   });
 
-  await db.item.update({
-    where: { id },
-    data: { parentId, sortOrder: siblings },
-  });
+  let index = siblings.length;
+  if (anchor) {
+    const anchorIndex = siblings.findIndex((sibling) => sibling.id === anchor.id);
+    if (anchorIndex === -1) return { ok: false, error: "That destination no longer exists." };
+    index = anchor.placement === "before" ? anchorIndex : anchorIndex + 1;
+  }
+
+  const ordered = [...siblings];
+  ordered.splice(index, 0, { id });
+
+  await db.$transaction(
+    ordered.map((sibling, position) =>
+      db.item.update({
+        where: { id: sibling.id },
+        data: { sortOrder: position, ...(sibling.id === id ? { parentId } : {}) },
+      }),
+    ),
+  );
 
   revalidateApp();
   return { ok: true, id };
