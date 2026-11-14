@@ -139,7 +139,7 @@ function ManualTimeDialogBody({
                   type="number"
                   min="0"
                   max="59"
-                  step="5"
+                  step="1"
                   value={minutes}
                   onChange={(event) => setMinutes(event.target.value)}
                   className="w-20"
