@@ -7,7 +7,7 @@ import { login, loginAsDemo, type AuthState } from "@/app/actions/auth";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/input";
 
-export function LoginForm({ demoMissing = false }: { demoMissing?: boolean }) {
+export function LoginForm({ demoMissing = false, resetSuccess = false }: { demoMissing?: boolean; resetSuccess?: boolean }) {
   const [state, action, pending] = useActionState<AuthState, FormData>(login, undefined);
   const [showPassword, setShowPassword] = useState(false);
 
@@ -24,6 +24,20 @@ export function LoginForm({ demoMissing = false }: { demoMissing?: boolean }) {
       {state?.message ? (
         <div className="mb-5 rounded-xl border border-danger/20 bg-danger-soft px-4 py-3 text-[13px] font-medium text-danger">
           {state.message}
+          {state.unverified && state.email ? (
+            <Link
+              href={`/verify-email?email=${encodeURIComponent(state.email)}`}
+              className="mt-2 block font-bold underline underline-offset-4"
+            >
+              Resend the verification email
+            </Link>
+          ) : null}
+        </div>
+      ) : null}
+
+      {resetSuccess ? (
+        <div className="mb-5 rounded-xl border border-success/20 bg-success-soft px-4 py-3 text-[13px] font-medium text-success">
+          Your password was updated. Log in with the new password.
         </div>
       ) : null}
 
@@ -72,7 +86,9 @@ export function LoginForm({ demoMissing = false }: { demoMissing?: boolean }) {
             <input type="checkbox" defaultChecked className="size-3.5 accent-[var(--primary)]" />
             Keep me signed in
           </label>
-          <span className="text-[12px] font-semibold text-muted-2">30-day session</span>
+          <Link href="/forgot-password" className="text-[12px] font-semibold text-muted hover:text-primary">
+            Forgot password?
+          </Link>
         </div>
 
         <Button type="submit" size="lg" className="w-full" loading={pending}>

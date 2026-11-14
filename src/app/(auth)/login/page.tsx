@@ -10,7 +10,7 @@ export const metadata: Metadata = { title: "Log in" };
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ demo?: string }>;
+  searchParams: Promise<{ demo?: string; reset?: string }>;
 }) {
   const session = await getSession();
   if (session) {
@@ -21,7 +21,7 @@ export default async function LoginPage({
 
   return (
     <AuthShell>
-      <LoginForm demoMissing={params.demo === "missing"} />
+      <LoginForm demoMissing={params.demo === "missing"} resetSuccess={params.reset === "success"} />
     </AuthShell>
   );
 }

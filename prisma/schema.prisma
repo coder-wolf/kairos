@@ -11,8 +11,9 @@ model User {
   id           String   @id @default(cuid())
   name         String
   email        String   @unique
-  passwordHash String
-  timezone     String   @default("UTC")
+  passwordHash    String
+  emailVerifiedAt DateTime?
+  timezone        String   @default("UTC")
   weekStartsOn Int      @default(1)
   theme        String   @default("dark")
   createdAt    DateTime @default(now())
@@ -22,6 +23,25 @@ model User {
   timeSessions TimeSession[]
   timer        TimerState?
   billing      BillingAccount?
+  authTokens   AuthToken[]
+}
+
+enum AuthTokenType {
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
+}
+
+model AuthToken {
+  id        String        @id @default(cuid())
+  userId    String
+  type      AuthTokenType
+  tokenHash String        @unique
+  expiresAt DateTime
+  createdAt DateTime      @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, type])
 }
 
 model BillingAccount {

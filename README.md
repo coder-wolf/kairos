@@ -111,6 +111,33 @@ Time distribution, daily/weekly/monthly trends, weekday rhythm, time-of-day patt
 - Accessible dialogs and menus with Radix UI
 - JSON data export
 - In-app reminders and clear empty states
+- Email verification and password reset links (Resend)
+- Hashed, single-use auth tokens with expiry and resend cooldowns
+
+## Accounts and email
+
+Signups create an unverified account by default **when an email provider is configured**:
+
+1. A 24-hour verification link is emailed after signup.
+2. Unverified accounts can't log in until the link is opened.
+3. Opening the link verifies the account and signs the user in.
+4. Resending is rate-limited and always stays generic.
+
+Forgot-password links are single-use, expire after one hour, and are only sent for real accounts
+without revealing whether an email exists.
+
+Email delivery uses [Resend](https://resend.com). Configure:
+
+```env
+RESEND_API_KEY="re_..."
+EMAIL_FROM="Kairos <hello@your-domain.com>"
+```
+
+Once `RESEND_API_KEY` is set, verification is enforced automatically. Existing accounts are
+backfilled as verified by the migration so nobody is locked out. If no provider is configured,
+signups keep working without verification so a missing mail credential can't block the app.
+For local testing without Resend, set `REQUIRE_EMAIL_VERIFICATION="true"` and the verification
+and reset links will be printed in the development server log.
 
 ## Plans
 
@@ -242,10 +269,11 @@ src/
       settings/        # Profile, workspace, preferences, security
       billing/         # Plans, checkout, subscription status
     actions/           # Server Actions (auth, timer, goals, billing, settings)
+    api/auth/          # Email verification callback
     api/export/        # JSON export
     api/webhooks/      # Lemon Squeezy webhook
   components/          # UI, charts, dialogs, timer, calendar, dashboards
-  lib/                 # Auth, timezone/time math, goals, analytics, Prisma
+  lib/                 # Auth, email, timezone/time math, goals, analytics, Prisma
 ```
 
 ### Time attribution
@@ -294,7 +322,10 @@ User ─── TimerState (one active timer per user)
 | `LEMON_SQUEEZY_MONTHLY_VARIANT_ID` | For billing | Monthly subscription variant |
 | `LEMON_SQUEEZY_YEARLY_VARIANT_ID` | For billing | Yearly subscription variant |
 | `LEMON_SQUEEZY_WEBHOOK_SECRET` | For billing | Webhook signing secret |
-| `NEXT_PUBLIC_APP_URL` | Recommended | Redirect base URL for checkout |
+| `NEXT_PUBLIC_APP_URL` | Recommended | Redirect base URL for checkout and email links |
+| `RESEND_API_KEY` | For email | Resend API key; enables verification and reset emails |
+| `EMAIL_FROM` | For email | Verified sender, e.g. `Kairos <hello@your-domain.com>` |
+| `REQUIRE_EMAIL_VERIFICATION` | Optional | Force verification locally without a provider |
 
 ## Notes
 

@@ -38,6 +38,7 @@ async function main() {
       name: "Alex Rivera",
       email: "demo@kairos.app",
       passwordHash,
+      emailVerifiedAt: new Date(),
       timezone: TZ,
       weekStartsOn: 1,
       theme: "dark",
