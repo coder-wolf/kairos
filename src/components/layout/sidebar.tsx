@@ -103,11 +103,11 @@ export function SidebarContent({
   const primary = [
     { href: "/dashboard", label: "Home", icon: House },
     { href: "/workspace", label: "Projects", icon: Network, badge: itemCount },
+    { href: "/goals", label: "Goals & Habits", icon: Target, badge: activeGoalCount },
     { href: "/calendar", label: "Calendar", icon: CalendarRange },
   ];
 
   const plan = [
-    { href: "/goals", label: "Goals & Habits", icon: Target, badge: activeGoalCount },
     { href: "/pomodoro", label: "Pomodoro", icon: Timer },
     { href: "/analytics", label: "Analytics", icon: BarChart3 },
     { href: "/history", label: "Time History", icon: History },
