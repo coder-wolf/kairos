@@ -133,9 +133,13 @@ RESEND_API_KEY="re_..."
 EMAIL_FROM="Kairos <hello@your-domain.com>"
 ```
 
-Once `RESEND_API_KEY` is set, verification is enforced automatically. Existing accounts are
+Once both `RESEND_API_KEY` and `EMAIL_FROM` are set, verification is enforced automatically. Existing accounts are
 backfilled as verified by the migration so nobody is locked out. If no provider is configured,
 signups keep working without verification so a missing mail credential can't block the app.
+`EMAIL_FROM` must use a domain verified in Resend, such as `Kairos <hello@your-domain.com>`.
+The free `onboarding@resend.dev` sender only delivers to the Resend account owner's own inbox, so
+it is not suitable for real signups.
+
 For local testing without Resend, set `REQUIRE_EMAIL_VERIFICATION="true"` and the verification
 and reset links will be printed in the development server log.
 

@@ -8,7 +8,7 @@ type EmailMessage = {
 };
 
 export function isEmailConfigured() {
-  return Boolean(process.env.RESEND_API_KEY);
+  return Boolean(process.env.RESEND_API_KEY && process.env.EMAIL_FROM);
 }
 
 /**
@@ -23,9 +23,9 @@ export function isEmailVerificationRequired() {
 
 async function sendEmail(message: EmailMessage) {
   const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.EMAIL_FROM || "Kairos <onboarding@resend.dev>";
+  const from = process.env.EMAIL_FROM;
 
-  if (!apiKey) {
+  if (!apiKey || !from) {
     // In development this is the fastest way to follow a verification link.
     if (process.env.NODE_ENV !== "production") {
       console.info(`[kairos-email] ${message.subject} -> ${message.to}\n${message.text}`);
