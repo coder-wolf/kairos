@@ -176,26 +176,10 @@ export async function deleteItem(id: string): Promise<ActionResult> {
   const { workspace } = await requireWorkspace();
   const item = await db.item.findFirst({ where: { id, workspaceId: workspace.id } });
   if (!item) return { ok: false, error: "Item not found." };
+  if (item.isSystem) return { ok: false, error: "The system item can't be deleted." };
 
-  const [childCount, sessionCount] = await Promise.all([
-    db.item.count({ where: { parentId: id } }),
-    db.timeSession.count({ where: { itemId: id } }),
-  ]);
-
-  if (childCount > 0) {
-    return {
-      ok: false,
-      error: "This item still has children. Move or delete them first, or archive it to keep the history.",
-    };
-  }
-
-  if (sessionCount > 0) {
-    return {
-      ok: false,
-      error: "This item has tracked time. Archive it instead so your history stays intact.",
-    };
-  }
-
+  // The self-relation and session/goal relations cascade, so removing the
+  // root removes the whole branch in one operation.
   await db.item.delete({ where: { id } });
   revalidateApp();
   return { ok: true, id };

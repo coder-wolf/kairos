@@ -817,7 +817,18 @@ export function WorkspaceTree({ items, weekLabel }: { items: WorkspaceItem[]; we
         open={Boolean(toDelete)}
         onOpenChange={(open) => !open && setToDelete(null)}
         title={`Delete ${toDelete?.name ?? "this item"}?`}
-        description="Deletion is permanent. Items with children or tracked time can't be deleted — archive them instead so your history remains trustworthy."
+        description={
+          toDelete
+            ? `This permanently deletes ${toDelete.name}${
+                descendantIds(items, toDelete.id).size > 1
+                  ? ` and ${descendantIds(items, toDelete.id).size - 1} nested ${pluralize(
+                      descendantIds(items, toDelete.id).size - 1,
+                      "item",
+                    )}`
+                  : ""
+              }, including their goals and time history. This can't be undone.`
+            : "This item and everything beneath it will be permanently deleted."
+        }
         confirmLabel="Delete forever"
         destructive
         onConfirm={async () => {
