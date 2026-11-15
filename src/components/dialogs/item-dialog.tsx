@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Layers, FolderKanban, Shapes, Minus } from "lucide-react";
+import { Check, Layers, FolderKanban, Shapes, Minus } from "lucide-react";
 import { toast } from "sonner";
 import { createItem, updateItem } from "@/app/actions/items";
 import { Button } from "@/components/ui/button";
@@ -166,20 +166,47 @@ function ItemDialogBody({ onOpenChange, items, initial, defaultParentId }: ItemD
           </Field>
 
           <Field label="Color">
-            <div className="flex flex-wrap gap-2">
-              {ITEM_PALETTE.map((option) => (
-                <button
-                  key={option}
-                  type="button"
-                  onClick={() => setColor(option)}
-                  className={cn(
-                    "h-8 w-8 rounded-full border-2 transition-transform hover:scale-110",
-                    color === option ? "border-text" : "border-transparent",
-                  )}
-                  style={{ background: option }}
-                  aria-label={`Use color ${option}`}
-                />
-              ))}
+            <div className="rounded-xl border border-border bg-surface-2/40 p-3">
+              <div className="mb-3 flex items-center gap-3">
+                <span
+                  className="grid h-9 w-9 shrink-0 place-items-center rounded-full ring-2 ring-text ring-offset-2 ring-offset-surface"
+                  style={{ background: color }}
+                >
+                  <Check className="h-4 w-4 text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.45)]" />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-[12px] font-bold">Selected color</p>
+                  <p className="font-mono text-[10px] uppercase tracking-wide text-muted-2">{color}</p>
+                </div>
+                <span className="ml-auto hidden text-[10px] font-medium text-muted-2 sm:block">
+                  Used across charts and the workspace
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-2.5">
+                {ITEM_PALETTE.map((option) => {
+                  const active = color === option;
+                  return (
+                    <button
+                      key={option}
+                      type="button"
+                      onClick={() => setColor(option)}
+                      aria-label={`Use color ${option}`}
+                      aria-pressed={active}
+                      className={cn(
+                        "grid h-9 w-9 place-items-center rounded-full border-2 transition-all duration-150",
+                        active
+                          ? "scale-110 border-text shadow-[0_0_0_3px_color-mix(in_srgb,var(--text)_14%,transparent)]"
+                          : "border-transparent opacity-80 hover:scale-105 hover:opacity-100",
+                      )}
+                      style={{ background: option }}
+                    >
+                      {active ? (
+                        <Check className="h-4 w-4 text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.45)]" />
+                      ) : null}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </Field>
 
