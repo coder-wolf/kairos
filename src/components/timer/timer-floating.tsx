@@ -1,14 +1,15 @@
 "use client";
 
 import * as React from "react";
-import { GripVertical, Maximize2, Pause, Play, Square, Timer } from "lucide-react";
+import { ArrowUpRight, GripVertical, Maximize2, Pause, Play, Square, Timer } from "lucide-react";
 import { useTimer } from "@/components/timer/timer-provider";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Select } from "@/components/ui/input";
+import { RingProgress } from "@/components/ui/progress";
 import { flattenItemOptions } from "@/lib/item-options";
 import type { ItemOption } from "@/lib/types";
-import { cn } from "@/lib/utils";
+import { cn, formatClock } from "@/lib/utils";
 
 const DIAL_MINUTES = 60;
 
@@ -23,7 +24,7 @@ function mmssFromElapsed(seconds: number) {
 }
 
 export function TimerFloating({ items }: { items: ItemOption[] }) {
-  const { timer, elapsed, pending, pause, resume, stop, changeItem, windowOpen, closeWindow } = useTimer();
+  const { timer, elapsed, pending, pause, resume, stop, changeItem, windowOpen, openWindow, closeWindow } = useTimer();
   const [position, setPosition] = React.useState<{ x: number; y: number } | null>(null);
   const [dragging, setDragging] = React.useState(false);
   const dragRef = React.useRef<{
@@ -34,8 +35,18 @@ export function TimerFloating({ items }: { items: ItemOption[] }) {
     originY: number;
   } | null>(null);
   const windowRef = React.useRef<HTMLDivElement>(null);
+  const miniRef = React.useRef<HTMLDivElement>(null);
+  const [miniPosition, setMiniPosition] = React.useState<{ x: number; y: number } | null>(null);
+  const [miniDragging, setMiniDragging] = React.useState(false);
+  const miniDragRef = React.useRef<{
+    pointerId: number;
+    startX: number;
+    startY: number;
+    originX: number;
+    originY: number;
+  } | null>(null);
 
-  /* eslint-disable react-hooks/set-state-in-effect -- restoring a persisted window position */
+  /* eslint-disable react-hooks/set-state-in-effect -- restoring persisted window positions */
   React.useEffect(() => {
     try {
       const raw = window.localStorage.getItem("kairos:timer-window-position");
@@ -48,9 +59,37 @@ export function TimerFloating({ items }: { items: ItemOption[] }) {
           });
         }
       }
+      const rawMini = window.localStorage.getItem("kairos:timer-mini-position");
+      if (rawMini) {
+        const savedMini = JSON.parse(rawMini) as { x?: number; y?: number };
+        if (typeof savedMini.x === "number" && typeof savedMini.y === "number") {
+          const width = miniRef.current?.offsetWidth ?? 280;
+          const height = miniRef.current?.offsetHeight ?? 56;
+          setMiniPosition({
+            x: Math.min(Math.max(8, savedMini.x), Math.max(8, window.innerWidth - width - 8)),
+            y: Math.min(Math.max(8, savedMini.y), Math.max(8, window.innerHeight - height - 8)),
+          });
+        }
+      }
     } catch {
       // ignore
     }
+  }, []);
+
+  React.useEffect(() => {
+    const onResize = () => {
+      setMiniPosition((current) => {
+        if (!current) return current;
+        const width = miniRef.current?.offsetWidth ?? 280;
+        const height = miniRef.current?.offsetHeight ?? 56;
+        return {
+          x: Math.min(current.x, Math.max(8, window.innerWidth - width - 8)),
+          y: Math.min(current.y, Math.max(8, window.innerHeight - height - 8)),
+        };
+      });
+    };
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
   }, []);
   /* eslint-enable react-hooks/set-state-in-effect */
 
@@ -98,6 +137,50 @@ export function TimerFloating({ items }: { items: ItemOption[] }) {
     });
   };
 
+  const startMiniDrag = (event: React.PointerEvent<HTMLButtonElement>) => {
+    const element = miniRef.current;
+    if (!element) return;
+    const rect = element.getBoundingClientRect();
+    miniDragRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      originX: rect.left,
+      originY: rect.top,
+    };
+    setMiniPosition({ x: rect.left, y: rect.top });
+    setMiniDragging(true);
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  const moveMiniDrag = (event: React.PointerEvent<HTMLButtonElement>) => {
+    const drag = miniDragRef.current;
+    if (!drag) return;
+    const element = miniRef.current;
+    const width = element?.offsetWidth ?? 280;
+    const height = element?.offsetHeight ?? 56;
+    setMiniPosition({
+      x: Math.min(Math.max(8, drag.originX + event.clientX - drag.startX), Math.max(8, window.innerWidth - width - 8)),
+      y: Math.min(Math.max(8, drag.originY + event.clientY - drag.startY), Math.max(8, window.innerHeight - height - 8)),
+    });
+  };
+
+  const endMiniDrag = () => {
+    if (!miniDragRef.current) return;
+    miniDragRef.current = null;
+    setMiniDragging(false);
+    setMiniPosition((current) => {
+      if (current) {
+        try {
+          window.localStorage.setItem("kairos:timer-mini-position", JSON.stringify(current));
+        } catch {
+          // ignore
+        }
+      }
+      return current;
+    });
+  };
+
   if (!timer) return null;
 
   const color = timer.itemColor ?? "var(--primary)";
@@ -109,7 +192,80 @@ export function TimerFloating({ items }: { items: ItemOption[] }) {
   const overDial = elapsed > totalSeconds;
 
   return (
-    <Dialog modal={false} open={windowOpen} onOpenChange={(open) => (open ? undefined : closeWindow())}>
+    <>
+      {!windowOpen ? (
+        <div
+          ref={miniRef}
+          className={cn(
+            "fixed z-40 flex items-center overflow-hidden rounded-2xl border border-border bg-surface/95 shadow-(--shadow-pop) backdrop-blur",
+            miniDragging && "cursor-grabbing ring-1 ring-primary/30",
+          )}
+          style={{
+            left: miniPosition?.x,
+            top: miniPosition?.y,
+            right: miniPosition ? undefined : 16,
+            bottom: miniPosition ? undefined : 16,
+          }}
+        >
+          <button
+            type="button"
+            onPointerDown={startMiniDrag}
+            onPointerMove={moveMiniDrag}
+            onPointerUp={endMiniDrag}
+            onPointerCancel={endMiniDrag}
+            className="grid h-14 w-6 shrink-0 cursor-grab touch-none place-items-center text-muted-2 transition-colors hover:bg-surface-2 hover:text-text active:cursor-grabbing"
+            aria-label="Move timer"
+            title="Drag to move"
+          >
+            <GripVertical className="h-3.5 w-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={openWindow}
+            className="flex h-14 items-center gap-3 pl-1 pr-2 text-left transition-colors hover:bg-surface-2"
+            title="Open the timer window"
+          >
+            <RingProgress value={progress * 100} size={34} stroke={3} color={color}>
+              <span
+                className={cn("h-1.5 w-1.5 rounded-full", timer.status === "RUNNING" ? "animate-pulse-soft" : "")}
+                style={{ background: timer.status === "RUNNING" ? color : "var(--warning)" }}
+              />
+            </RingProgress>
+            <span className="min-w-0">
+              <span className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.12em]" style={{ color }}>
+                <Timer className="h-3 w-3" /> {timer.status === "RUNNING" ? "Tracking" : "Paused"}
+              </span>
+              <span className="block max-w-[150px] truncate text-[10px] font-semibold text-muted">
+                {timer.isUnassigned ? "No project yet" : timer.itemName}
+              </span>
+              <span suppressHydrationWarning className="block font-mono text-[13px] font-bold tabular-nums">
+                {formatClock(elapsed)}
+              </span>
+            </span>
+          </button>
+          <div className="flex items-center gap-0.5 pr-2">
+            <button
+              type="button"
+              onClick={timer.status === "RUNNING" ? pause : resume}
+              disabled={pending}
+              className="grid h-8 w-8 place-items-center rounded-lg text-muted transition-colors hover:bg-surface-2 hover:text-text disabled:opacity-60"
+              aria-label={timer.status === "RUNNING" ? "Pause timer" : "Resume timer"}
+            >
+              {timer.status === "RUNNING" ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
+            </button>
+            <button
+              type="button"
+              onClick={openWindow}
+              className="grid h-8 w-8 place-items-center rounded-lg text-muted transition-colors hover:bg-surface-2 hover:text-text"
+              aria-label="Open timer window"
+            >
+              <ArrowUpRight className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      <Dialog modal={false} open={windowOpen} onOpenChange={(open) => (open ? undefined : closeWindow())}>
       <DialogContent
         ref={windowRef}
         showOverlay={false}
@@ -293,6 +449,7 @@ export function TimerFloating({ items }: { items: ItemOption[] }) {
           </div>
         </div>
       </DialogContent>
-    </Dialog>
+      </Dialog>
+    </>
   );
 }
