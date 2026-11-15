@@ -190,6 +190,7 @@ Billing flow:
 - `POST /api/webhooks/lemonsqueezy` verifies the `X-Signature` HMAC before writing anything.
 - Checkout custom data carries `user_id` and `workspace_id`, with email/customer fallback matching.
 - Subscriptions remain Pro until `ends_at` when cancelled.
+- Active subscribers can cancel from **Plan & Billing**; access continues through the paid period.
 - Checkout and subscription management are hosted by Lemon Squeezy; card data never touches Kairos.
 
 ## Quick start

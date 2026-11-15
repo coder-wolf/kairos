@@ -11,6 +11,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { startCheckout } from "@/app/actions/billing";
+import { CancelPlanButton } from "@/components/billing/cancel-plan-button";
 import { Button } from "@/components/ui/button";
 import { getBillingAccount } from "@/lib/billing";
 import { getAppContext } from "@/lib/dal";
@@ -75,6 +76,12 @@ export default async function BillingPage({
   const periodEnd = formatDate(billing?.currentPeriodEnd ?? billing?.endsAt ?? billing?.renewsAt ?? null, user.timezone);
   const isDemo = billing?.provider === "demo";
   const manageUrl = billing?.updateUrl?.startsWith("https://") ? billing.updateUrl : null;
+  const canCancel = Boolean(
+    user.isPro &&
+      billing?.subscriptionId &&
+      billing.provider !== "demo" &&
+      !["cancelled", "expired", "unpaid", "inactive"].includes(billing.status),
+  );
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -161,6 +168,7 @@ export default async function BillingPage({
                       {isDemo ? "Demo Pro access — no live subscription is attached." : "Subscription management is available through Lemon Squeezy."}
                     </p>
                   )}
+                  {canCancel ? <CancelPlanButton periodEnd={periodEnd} /> : null}
                   <span className="text-[10px] text-muted-2">
                     {billing?.interval ? `Billed ${billing.interval}` : "Active plan"}
                   </span>
