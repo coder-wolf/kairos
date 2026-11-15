@@ -41,6 +41,7 @@ export default async function WorkspacePage() {
       icon: item.icon,
       color: item.color,
       sortOrder: item.sortOrder,
+      createdAt: item.createdAt.toISOString(),
       archivedAt: item.archivedAt ? item.archivedAt.toISOString() : null,
       seconds: totals.get(item.id) ?? 0,
       directSeconds: direct.get(item.id) ?? 0,

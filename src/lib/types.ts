@@ -92,6 +92,7 @@ export type WorkspaceItem = {
   icon: string | null;
   color: string | null;
   sortOrder: number;
+  createdAt: string;
   archivedAt: string | null;
   seconds: number;
   directSeconds: number;

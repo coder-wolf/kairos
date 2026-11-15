@@ -19,6 +19,7 @@ import {
   Trash2,
   Undo2,
   Archive,
+  ArrowUpDown,
   MoveRight,
   X,
 } from "lucide-react";
@@ -44,8 +45,27 @@ import type { WorkspaceItem } from "@/lib/types";
 import { cn, formatDuration, pluralize } from "@/lib/utils";
 
 type Node = WorkspaceItem & { children: Node[]; depth: number };
+type SortMode = "name" | "custom" | "time" | "recent";
 
-function buildTree(items: WorkspaceItem[]): Node[] {
+const SORT_OPTIONS: Array<{ value: SortMode; label: string }> = [
+  { value: "name", label: "Name" },
+  { value: "custom", label: "Custom order" },
+  { value: "time", label: "Time tracked" },
+  { value: "recent", label: "Recently created" },
+];
+
+function byName(a: WorkspaceItem, b: WorkspaceItem) {
+  return a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
+}
+
+function compareNodes(a: WorkspaceItem, b: WorkspaceItem, mode: SortMode) {
+  if (mode === "custom") return a.sortOrder - b.sortOrder || byName(a, b);
+  if (mode === "time") return b.seconds - a.seconds || byName(a, b);
+  if (mode === "recent") return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime() || byName(a, b);
+  return byName(a, b);
+}
+
+function buildTree(items: WorkspaceItem[], sortMode: SortMode): Node[] {
   const byId = new Map<string, Node>();
   for (const item of items) byId.set(item.id, { ...item, children: [], depth: 0 });
   const roots: Node[] = [];
@@ -54,7 +74,7 @@ function buildTree(items: WorkspaceItem[]): Node[] {
     else roots.push(node);
   }
   const sort = (nodes: Node[], depth: number) => {
-    nodes.sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name));
+    nodes.sort((a, b) => compareNodes(a, b, sortMode));
     for (const node of nodes) {
       node.depth = depth;
       sort(node.children, depth + 1);
@@ -86,6 +106,7 @@ export function WorkspaceTree({ items, weekLabel }: { items: WorkspaceItem[]; we
   const { openNewItem, openManualTime, openNewGoal } = useQuickActions();
   const { start, timer } = useTimer();
   const [query, setQuery] = React.useState("");
+  const [sortMode, setSortMode] = React.useState<SortMode>("name");
   const [addingTo, setAddingTo] = React.useState<string | null | undefined>(undefined);
   const [newName, setNewName] = React.useState("");
   const [newType, setNewType] = React.useState<"AREA" | "PROJECT">("PROJECT");
@@ -117,6 +138,8 @@ export function WorkspaceTree({ items, weekLabel }: { items: WorkspaceItem[]; we
       if (stored) setCollapsed(new Set(JSON.parse(stored) as string[]));
       const storedEmpty = localStorage.getItem("kairos:expanded-empty-items");
       if (storedEmpty) setExpandedEmpty(new Set(JSON.parse(storedEmpty) as string[]));
+      const storedSort = localStorage.getItem("kairos:item-sort") as SortMode | null;
+      if (storedSort && SORT_OPTIONS.some((option) => option.value === storedSort)) setSortMode(storedSort);
     } catch {
       // ignore
     }
@@ -126,6 +149,15 @@ export function WorkspaceTree({ items, weekLabel }: { items: WorkspaceItem[]; we
     setCollapsed(next);
     try {
       localStorage.setItem("kairos:collapsed-items", JSON.stringify(Array.from(next)));
+    } catch {
+      // ignore
+    }
+  };
+
+  const persistSort = (next: SortMode) => {
+    setSortMode(next);
+    try {
+      localStorage.setItem("kairos:item-sort", next);
     } catch {
       // ignore
     }
@@ -147,7 +179,7 @@ export function WorkspaceTree({ items, weekLabel }: { items: WorkspaceItem[]; we
 
   const activeItems = items.filter((item) => !item.archivedAt);
   const archivedItems = items.filter((item) => item.archivedAt);
-  const tree = React.useMemo(() => buildTree(activeItems), [activeItems]);
+  const tree = React.useMemo(() => buildTree(activeItems, sortMode), [activeItems, sortMode]);
 
   const searchVisible = React.useMemo(() => {
     if (!query.trim()) return null;
@@ -461,8 +493,9 @@ export function WorkspaceTree({ items, weekLabel }: { items: WorkspaceItem[]; we
           </form>
         ) : (
         <div
-          draggable
+          draggable={sortMode === "custom"}
           onDragStart={(event) => {
+            if (sortMode !== "custom") return;
             setDragging(node.id);
             event.dataTransfer.effectAllowed = "move";
             event.dataTransfer.setData("text/plain", node.id);
@@ -673,6 +706,21 @@ export function WorkspaceTree({ items, weekLabel }: { items: WorkspaceItem[]; we
             />
           </div>
           <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
+              <ArrowUpDown className="h-3.5 w-3.5 text-muted-2" />
+              <Select
+                value={sortMode}
+                onChange={(event) => persistSort(event.target.value as SortMode)}
+                aria-label="Sort projects"
+                className="h-8 w-[145px] py-0 text-[11px] font-semibold"
+              >
+                {SORT_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </Select>
+            </div>
             <Button variant="outline" size="sm" onClick={() => persistCollapsed(new Set())}>
               Expand all
             </Button>
@@ -712,6 +760,7 @@ export function WorkspaceTree({ items, weekLabel }: { items: WorkspaceItem[]; we
           </div>
         ) : (
           <>
+            {sortMode === "custom" ? (
             <div
               onDragOver={(event) => {
                 if (!dragging) return;
@@ -734,6 +783,7 @@ export function WorkspaceTree({ items, weekLabel }: { items: WorkspaceItem[]; we
             >
               {dragging ? "Drop here to move to the top level" : "—"}
             </div>
+            ) : null}
             <div className="scroll-thin overflow-x-auto">
               <div className="min-w-[820px]">
                 <div className="grid grid-cols-[minmax(0,1fr)_84px_60px_72px_118px_104px] items-center gap-2 border-b border-border bg-surface-2/50 px-3 py-2 text-[9px] font-bold uppercase tracking-[0.14em] text-muted-2">
@@ -754,7 +804,10 @@ export function WorkspaceTree({ items, weekLabel }: { items: WorkspaceItem[]; we
         )}
 
         <div className="border-t border-border px-4 py-3 text-[10px] font-medium text-muted-2">
-          Drag between items to reorder. Drop onto an expanded item to nest inside it. Times show {weekLabel.toLowerCase()} totals, including descendants.
+          {sortMode === "custom"
+            ? "Drag between items to reorder. Drop onto an expanded item to nest inside it."
+            : `Sorted by ${SORT_OPTIONS.find((option) => option.value === sortMode)?.label.toLowerCase() ?? "name"}. Switch to Custom order to drag projects.`}{" "}
+          Times show {weekLabel.toLowerCase()} totals, including descendants.
         </div>
       </div>
 
@@ -858,7 +911,7 @@ export function WorkspaceTree({ items, weekLabel }: { items: WorkspaceItem[]; we
           </DialogHeader>
           <Select value={moveParent} onChange={(event) => setMoveParent(event.target.value)}>
             <option value="">Top level</option>
-            {flattenNodes(buildTree(activeItems))
+            {flattenNodes(buildTree(activeItems, sortMode))
               .filter((node) => !moving || !descendantIds(activeItems, moving.id).has(node.id))
               .map((node) => (
                 <option key={node.id} value={node.id}>
