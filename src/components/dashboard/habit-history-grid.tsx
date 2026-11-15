@@ -4,18 +4,18 @@ import * as React from "react";
 import Link from "next/link";
 import { ChevronDown, ChevronUp, Flame } from "lucide-react";
 import type { Goal, Item } from "@prisma/client";
-import type { StreakSummary } from "@/lib/goals";
+import type { HabitDay, StreakSummary } from "@/lib/goals";
 import { cn, pluralize } from "@/lib/utils";
 
 type HabitEntry = {
   goal: Goal & { item: Item };
   streak: StreakSummary;
+  days: HabitDay[];
 };
 
-type HistoryCell = StreakSummary["history"][number];
-const HISTORY_BOXES = 24;
+const HISTORY_DAYS = 24;
 
-function cellStyle(entry: StreakSummary["history"][number]): React.CSSProperties {
+function cellStyle(entry: Pick<HabitDay, "complete" | "percent">): React.CSSProperties {
   if (entry.complete) {
     const green = entry.percent >= 150 ? 100 : entry.percent >= 125 ? 84 : entry.percent >= 110 ? 70 : 56;
     return {
@@ -51,7 +51,7 @@ export function HabitHistoryGrid({ entries }: { entries: HabitEntry[] }) {
     <div className="p-3 pt-2">
       <div className="mb-2 flex items-center justify-between px-1">
         <span className="text-[9px] font-bold uppercase tracking-[0.14em] text-muted-2">
-          Recent period history · last 24 days/weeks
+          Recent daily history · last 24 days
         </span>
         <span className="flex items-center gap-1 text-[8px] font-medium text-muted-2">
           <span className="h-2.5 w-2.5 rounded-[2px]" style={{ background: "color-mix(in srgb, var(--muted) 16%, var(--surface-2))", boxShadow: "inset 0 0 0 1px color-mix(in srgb, var(--muted) 24%, transparent)" }} />
@@ -63,14 +63,10 @@ export function HabitHistoryGrid({ entries }: { entries: HabitEntry[] }) {
         </span>
       </div>
       <div className="space-y-2.5">
-        {visible.map(({ goal, streak }) => {
-          const recent = streak.history.slice(-HISTORY_BOXES);
-          const cells: Array<HistoryCell | null> = [
-            ...Array.from({ length: Math.max(0, HISTORY_BOXES - recent.length) }, () => null),
-            ...recent,
-          ];
-          const firstCell = cells.find((cell): cell is HistoryCell => Boolean(cell));
-          const lastCell = [...cells].reverse().find((cell): cell is HistoryCell => Boolean(cell));
+        {visible.map(({ goal, streak, days }) => {
+          const cells = days.slice(-HISTORY_DAYS);
+          const firstCell = cells.find((cell) => !cell.inactive);
+          const lastCell = [...cells].reverse().find((cell) => !cell.inactive);
           return (
             <div key={goal.id} className="group">
               <div className="flex items-center justify-between gap-2">
@@ -93,20 +89,10 @@ export function HabitHistoryGrid({ entries }: { entries: HabitEntry[] }) {
               </div>
               <div className="mt-1.5 grid grid-cols-[repeat(24,minmax(0,1fr))] gap-1">
                 {cells.map((cell, index) =>
-                  cell ? (
+                  cell.inactive ? (
                     <span
-                      key={`${goal.id}-${cell.period.startKey}-${index}`}
-                      title={`${cell.period.label} · ${Math.round(cell.percent)}%${cell.isCurrent ? " · current" : ""}`}
-                      className={cn(
-                        "aspect-square w-full rounded-[3px] transition-transform hover:scale-110",
-                        cell.isCurrent && "ring-2 ring-primary/50 ring-offset-1 ring-offset-surface",
-                      )}
-                      style={cellStyle(cell)}
-                    />
-                  ) : (
-                    <span
-                      key={`${goal.id}-pad-${index}`}
-                      title="No data for this period"
+                      key={`${goal.id}-pad-${cell.dayKey}-${index}`}
+                      title="Before this goal started"
                       className="aspect-square w-full rounded-[3px]"
                       style={{
                         backgroundColor: "var(--surface-2)",
@@ -114,15 +100,25 @@ export function HabitHistoryGrid({ entries }: { entries: HabitEntry[] }) {
                         opacity: 0.45,
                       }}
                     />
+                  ) : (
+                    <span
+                      key={`${goal.id}-${cell.dayKey}-${index}`}
+                      title={`${cell.label}${goal.periodType === "WEEKLY" ? ` · week of ${cell.periodLabel}` : ""} · ${Math.round(cell.percent)}%${cell.isCurrent ? " · current" : ""}`}
+                      className={cn(
+                        "aspect-square w-full rounded-[3px] transition-transform hover:scale-110",
+                        cell.isCurrent && "ring-2 ring-primary/50 ring-offset-1 ring-offset-surface",
+                      )}
+                      style={cellStyle(cell)}
+                    />
                   ),
                 )}
               </div>
               <div className="mt-1 flex items-center justify-between gap-2 px-0.5 text-[8px] font-medium text-muted-2">
-                <span className="shrink-0">{firstCell?.period.label ?? ""}</span>
+                <span className="shrink-0">{firstCell?.label ?? ""}</span>
                 <span className="truncate text-center text-muted">
                   {streak.completed} complete · {streak.longest} best
                 </span>
-                <span className="shrink-0">{lastCell?.period.label ?? ""}</span>
+                <span className="shrink-0">{lastCell?.label ?? ""}</span>
               </div>
             </div>
           );

@@ -445,3 +445,65 @@ export function periodNoun(goal: Goal) {
 }
 
 export { endOfDayKey };
+
+export type HabitDay = {
+  dayKey: string;
+  label: string;
+  periodLabel: string;
+  complete: boolean;
+  partial: boolean;
+  percent: number;
+  isCurrent: boolean;
+  inactive: boolean;
+};
+
+/**
+ * A fixed calendar window of recent days for the habit heatmap. Daily goals
+ * are compared against their daily target; weekly goals are compared against
+ * their share of the weekly target for each scheduled day.
+ */
+export function computeHabitDays(
+  goal: GoalWithItem,
+  items: Item[],
+  sessions: SessionInput[],
+  timezone: string,
+  weekStartsOn: number,
+  now = new Date(),
+  count = 24,
+): HabitDay[] {
+  const dailyTotals = dailyTotalsForGoal(goal, items, sessions, timezone);
+  const todayKey = toDateKey(now, timezone);
+  const startKey = toDateKey(goal.startDate, timezone);
+  const endKey = goal.endDate ? toDateKey(goal.endDate, timezone) : null;
+  const scheduledDays = goal.daysOfWeek.length > 0 ? goal.daysOfWeek.length : 7;
+
+  return Array.from({ length: count }, (_, index) => {
+    const dayKey = addDaysToKey(todayKey, index - (count - 1));
+    const dayStart = startOfDayKey(dayKey, timezone);
+    const period = goalPeriod(goal, dayStart, timezone, weekStartsOn);
+    const inactive = dayKey < startKey || Boolean(endKey && dayKey > endKey);
+    const actual = dailyTotals.get(dayKey) ?? 0;
+
+    const target =
+      goal.periodType === "WEEKLY"
+        ? targetForPeriod(goal, period.start) / scheduledDays
+        : targetForPeriod(goal, dayStart);
+    const percent = inactive || target <= 0 ? 0 : (actual / target) * 100;
+
+    return {
+      dayKey,
+      label: new Intl.DateTimeFormat("en-US", {
+        timeZone: "UTC",
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+      }).format(dateKeyToUtcNoon(dayKey)),
+      periodLabel: period.label,
+      complete: !inactive && percent >= 100,
+      partial: !inactive && percent > 0 && percent < 100,
+      percent,
+      isCurrent: dayKey === todayKey,
+      inactive,
+    };
+  });
+}

@@ -24,7 +24,7 @@ import { SessionTable } from "@/components/sessions/session-table";
 import { buildTrend, totalSeconds } from "@/lib/analytics";
 import { getAppContext, toGoalSummaries, toSessionRows } from "@/lib/dal";
 import { aggregateByItem, getSubtreeIds } from "@/lib/items";
-import { computeGoalProgress, computeStreaks } from "@/lib/goals";
+import { computeGoalProgress, computeHabitDays, computeStreaks } from "@/lib/goals";
 import { getRecentSessions, getSessionsWindow } from "@/lib/queries";
 import { getDateRange } from "@/lib/time";
 import { formatDuration, pluralize } from "@/lib/utils";
@@ -125,6 +125,7 @@ export default async function DashboardPage() {
     .map((goal) => ({
       goal,
       streak: computeStreaks(goal, items, sessions, tz, weekStartsOn, now),
+      days: computeHabitDays(goal, items, sessions, tz, weekStartsOn, now, 24),
     }))
     .sort((a, b) => b.streak.current - a.streak.current || b.streak.consistency - a.streak.consistency);
 
