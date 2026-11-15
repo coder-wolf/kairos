@@ -43,6 +43,7 @@ export type SessionInput = {
 export type ProfileInput = {
   name: string;
   email: string;
+  currentPassword?: string;
 };
 
 export type WorkspaceInput = {

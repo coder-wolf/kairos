@@ -43,12 +43,14 @@ export function ProfileForm({ user }: { user: UserSummary }) {
   const { pending, save } = useSaver();
   const [name, setName] = React.useState(user.name);
   const [email, setEmail] = React.useState(user.email);
+  const [currentPassword, setCurrentPassword] = React.useState("");
+  const emailChanged = email.trim().toLowerCase() !== user.email;
 
   return (
     <form
       onSubmit={(event) => {
         event.preventDefault();
-        save(() => updateProfile({ name, email }), "Profile updated");
+        save(() => updateProfile({ name, email, currentPassword }), "Profile updated");
       }}
       className="space-y-4"
     >
@@ -60,6 +62,17 @@ export function ProfileForm({ user }: { user: UserSummary }) {
           <Input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required />
         </Field>
       </div>
+      {emailChanged ? (
+        <Field label="Current password" hint="Required to confirm an email change.">
+          <Input
+            type="password"
+            value={currentPassword}
+            onChange={(event) => setCurrentPassword(event.target.value)}
+            autoComplete="current-password"
+            required
+          />
+        </Field>
+      ) : null}
       <div className="flex justify-end">
         <Button type="submit" loading={pending}>
           Save profile

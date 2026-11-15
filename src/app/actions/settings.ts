@@ -29,6 +29,14 @@ export async function updateProfile(input: ProfileInput): Promise<ActionResult> 
   if (clash) return { ok: false, error: "That email is already in use." };
 
   const emailChanged = parsed.data.email !== user.email;
+  if (emailChanged) {
+    if (!input.currentPassword) {
+      return { ok: false, error: "Enter your current password to change your email." };
+    }
+    const valid = await bcrypt.compare(input.currentPassword, user.passwordHash);
+    if (!valid) return { ok: false, error: "Your current password doesn't match." };
+  }
+
   const updated = await db.user.update({
     where: { id: user.id },
     data: {
