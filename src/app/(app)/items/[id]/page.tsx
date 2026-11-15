@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { AreaTrendChart, DistributionDonut } from "@/components/charts";
 import { GoalCard } from "@/components/goals/goal-card";
+import { NewGoalButton } from "@/components/goals/new-goal-button";
 import { ItemActions } from "@/components/item/item-actions";
 import { ItemChildren, type ChildRow } from "@/components/item/item-children";
 import { SessionList } from "@/components/sessions/session-list";
@@ -236,6 +237,7 @@ export default async function ItemPage({ params }: { params: Promise<{ id: strin
                   Independent targets attached directly to this item.
                 </p>
               </div>
+              <NewGoalButton itemId={item.id} label="Add goal" size="sm" className="h-8" />
             </div>
             <div className="space-y-3 p-3">
               {goalsWithProgress.length === 0 ? (
