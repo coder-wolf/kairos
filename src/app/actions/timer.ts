@@ -39,7 +39,7 @@ export async function startTimer(
       startedAt: now,
       sessionStartedAt: now,
       accumulatedSeconds: 0,
-      description: options?.description?.trim() || null,
+      description: options?.description?.trim().slice(0, 280) || null,
       source: "TIMER",
     },
     include: { item: true },

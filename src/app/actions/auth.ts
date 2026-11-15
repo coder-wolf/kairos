@@ -3,14 +3,11 @@
 import bcrypt from "bcryptjs";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { getAppUrl } from "@/lib/app-url";
-import { createAuthToken, findAuthToken } from "@/lib/auth-tokens";
+import { sendPasswordResetForUser, sendVerificationForUser } from "@/lib/account-email";
+import { findAuthToken } from "@/lib/auth-tokens";
 import { db } from "@/lib/db";
-import {
-  isEmailVerificationRequired,
-  sendPasswordResetEmail,
-  sendVerificationEmail,
-} from "@/lib/email";
+import { isEmailVerificationRequired } from "@/lib/email";
+import { enforceRateLimit, getClientIp } from "@/lib/rate-limit";
 import { createSession, deleteSession, setThemeCookie } from "@/lib/session";
 
 export type AuthState =
@@ -23,9 +20,7 @@ export type AuthState =
     }
   | undefined;
 
-const VERIFICATION_TTL_MS = 24 * 60 * 60 * 1000;
-const RESET_TTL_MS = 60 * 60 * 1000;
-const TOKEN_COOLDOWN_MS = 60 * 1000;
+const DUMMY_PASSWORD_HASH = "$2b$10$a1ux/npwroj9QxU5DdCe4OBq94yOxhfdFHqfTQVYYJijbIZRSSbSO";
 
 const loginSchema = z.object({
   email: z.string().trim().toLowerCase().email("Enter a valid email address."),
@@ -33,7 +28,7 @@ const loginSchema = z.object({
 });
 
 const signupSchema = z.object({
-  name: z.string().trim().min(2, "Name must be at least 2 characters."),
+  name: z.string().trim().min(2, "Name must be at least 2 characters.").max(80, "Keep your name under 80 characters."),
   email: z.string().trim().toLowerCase().email("Enter a valid email address."),
   password: z
     .string()
@@ -64,25 +59,6 @@ const resetPasswordSchema = z
     path: ["confirm"],
   });
 
-async function recentlyIssued(userId: string, type: "EMAIL_VERIFICATION" | "PASSWORD_RESET") {
-  return db.authToken.findFirst({
-    where: {
-      userId,
-      type,
-      createdAt: { gt: new Date(Date.now() - TOKEN_COOLDOWN_MS) },
-    },
-    select: { id: true },
-  });
-}
-
-async function sendVerification(user: { id: string; email: string; name: string }) {
-  if (await recentlyIssued(user.id, "EMAIL_VERIFICATION")) return;
-
-  const { token } = await createAuthToken(user.id, "EMAIL_VERIFICATION", VERIFICATION_TTL_MS);
-  const url = `${await getAppUrl()}/api/auth/verify-email?token=${encodeURIComponent(token)}`;
-  await sendVerificationEmail({ to: user.email, name: user.name, url });
-}
-
 export async function login(_state: AuthState, formData: FormData): Promise<AuthState> {
   const parsed = loginSchema.safeParse({
     email: formData.get("email"),
@@ -93,13 +69,18 @@ export async function login(_state: AuthState, formData: FormData): Promise<Auth
     return { errors: parsed.error.flatten().fieldErrors };
   }
 
-  const user = await db.user.findUnique({ where: { email: parsed.data.email } });
-  if (!user) {
-    return { message: "That email and password combination doesn't match an account." };
+  const ip = await getClientIp();
+  const [ipLimit, targetLimit] = await Promise.all([
+    enforceRateLimit("login-ip", ip, 40, 15 * 60 * 1000),
+    enforceRateLimit("login-target", `${ip}:${parsed.data.email}`, 10, 10 * 60 * 1000),
+  ]);
+  if (!ipLimit.ok || !targetLimit.ok) {
+    return { message: "Too many attempts. Please wait a few minutes and try again." };
   }
 
-  const valid = await bcrypt.compare(parsed.data.password, user.passwordHash);
-  if (!valid) {
+  const user = await db.user.findUnique({ where: { email: parsed.data.email } });
+  const valid = await bcrypt.compare(parsed.data.password, user?.passwordHash ?? DUMMY_PASSWORD_HASH);
+  if (!user || !valid) {
     return { message: "That email and password combination doesn't match an account." };
   }
 
@@ -111,7 +92,7 @@ export async function login(_state: AuthState, formData: FormData): Promise<Auth
     };
   }
 
-  await createSession(user.id);
+  await createSession(user.id, user.sessionVersion);
   await setThemeCookie(user.theme);
   redirect("/dashboard");
 }
@@ -126,6 +107,10 @@ export async function signup(_state: AuthState, formData: FormData): Promise<Aut
 
   if (!parsed.success) {
     return { errors: parsed.error.flatten().fieldErrors };
+  }
+
+  if (!(await enforceRateLimit("signup-ip", await getClientIp(), 10, 60 * 60 * 1000)).ok) {
+    return { message: "Too many accounts created from this connection. Please try again later." };
   }
 
   const { name, email, password, workspaceName } = parsed.data;
@@ -154,11 +139,11 @@ export async function signup(_state: AuthState, formData: FormData): Promise<Aut
   });
 
   if (verificationRequired) {
-    await sendVerification(user);
+    await sendVerificationForUser(user);
     redirect(`/verify-email?sent=1&email=${encodeURIComponent(email)}`);
   }
 
-  await createSession(user.id);
+  await createSession(user.id, user.sessionVersion);
   await setThemeCookie("dark");
   redirect("/dashboard?welcome=1");
 }
@@ -169,9 +154,13 @@ export async function resendVerification(_state: AuthState, formData: FormData):
     return { errors: parsed.error.flatten().fieldErrors };
   }
 
+  if (!(await enforceRateLimit("verify-resend-ip", await getClientIp(), 10, 60 * 60 * 1000)).ok) {
+    return { message: "Too many requests. Please wait a few minutes and try again." };
+  }
+
   const user = await db.user.findUnique({ where: { email: parsed.data.email } });
   if (user && !user.emailVerifiedAt) {
-    await sendVerification(user);
+    await sendVerificationForUser(user);
   }
 
   return {
@@ -186,11 +175,13 @@ export async function requestPasswordReset(_state: AuthState, formData: FormData
     return { errors: parsed.error.flatten().fieldErrors };
   }
 
+  if (!(await enforceRateLimit("password-reset-ip", await getClientIp(), 10, 60 * 60 * 1000)).ok) {
+    return { message: "Too many requests. Please wait a few minutes and try again." };
+  }
+
   const user = await db.user.findUnique({ where: { email: parsed.data.email } });
-  if (user && !(await recentlyIssued(user.id, "PASSWORD_RESET"))) {
-    const { token } = await createAuthToken(user.id, "PASSWORD_RESET", RESET_TTL_MS);
-    const url = `${await getAppUrl()}/reset-password?token=${encodeURIComponent(token)}`;
-    await sendPasswordResetEmail({ to: user.email, name: user.name, url });
+  if (user) {
+    await sendPasswordResetForUser(user);
   }
 
   return {
@@ -223,20 +214,25 @@ export async function resetPassword(_state: AuthState, formData: FormData): Prom
       data: {
         passwordHash,
         emailVerifiedAt: record.user.emailVerifiedAt ?? new Date(),
+        sessionVersion: { increment: 1 },
       },
     }),
-    db.authToken.deleteMany({ where: { userId: record.userId, type: "PASSWORD_RESET" } }),
+    db.authToken.deleteMany({ where: { userId: record.userId } }),
   ]);
 
   redirect("/login?reset=success");
 }
 
 export async function loginAsDemo() {
+  if (!(await enforceRateLimit("demo-login-ip", await getClientIp(), 30, 60 * 60 * 1000)).ok) {
+    redirect("/login?demo=rate");
+  }
+
   const demo = await db.user.findUnique({ where: { email: "demo@kairos.app" } });
   if (!demo) {
     redirect("/login?demo=missing");
   }
-  await createSession(demo.id);
+  await createSession(demo.id, demo.sessionVersion);
   await setThemeCookie(demo.theme);
   redirect("/dashboard");
 }

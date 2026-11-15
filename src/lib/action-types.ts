@@ -1,7 +1,7 @@
 import type { ItemType, PeriodType, SessionSource } from "@prisma/client";
 import type { TimerSnapshot } from "./types";
 
-export type ActionResult = { ok: true; id?: string } | { ok: false; error: string };
+export type ActionResult = { ok: true; id?: string; message?: string } | { ok: false; error: string };
 
 export type TimerActionResult =
   | { ok: true; timer: TimerSnapshot | null }

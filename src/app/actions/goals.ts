@@ -70,7 +70,7 @@ export async function createGoal(input: GoalInput): Promise<ActionResult> {
     data: {
       workspaceId: workspace.id,
       itemId: input.itemId,
-      name: input.name?.trim() || item.name,
+      name: input.name?.trim().slice(0, 80) || item.name,
       targetSeconds,
       periodType: input.periodType,
       daysOfWeek: cleanDays(input.daysOfWeek),
@@ -133,7 +133,7 @@ export async function updateGoal(input: GoalInput): Promise<ActionResult> {
     where: { id: goal.id },
     data: {
       itemId: input.itemId,
-      name: input.name?.trim() || item.name,
+      name: input.name?.trim().slice(0, 80) || item.name,
       targetSeconds,
       periodType: input.periodType,
       daysOfWeek: cleanDays(input.daysOfWeek),

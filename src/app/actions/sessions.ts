@@ -10,21 +10,23 @@ import { getPlanForUser } from "@/lib/billing";
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
 
+class SessionInputError extends Error {}
+
 function parseSessionTimes(input: SessionInput, timezone: string) {
   if (!DATE_PATTERN.test(input.date)) {
-    throw new Error("Choose a valid date.");
+    throw new SessionInputError("Choose a valid date.");
   }
   const minutes = Math.round(Number(input.durationMinutes));
   if (!Number.isFinite(minutes) || minutes < 1) {
-    throw new Error("Duration must be at least 1 minute.");
+    throw new SessionInputError("Duration must be at least 1 minute.");
   }
   if (minutes > 24 * 60) {
-    throw new Error("A single entry can't be longer than 24 hours.");
+    throw new SessionInputError("A single entry can't be longer than 24 hours.");
   }
 
   let time = "12:00";
   if (input.startTime) {
-    if (!TIME_PATTERN.test(input.startTime)) throw new Error("Enter a valid start time.");
+    if (!TIME_PATTERN.test(input.startTime)) throw new SessionInputError("Enter a valid start time.");
     time = input.startTime;
   }
 
@@ -60,7 +62,7 @@ export async function createSession(input: SessionInput): Promise<ActionResult> 
     revalidateApp();
     return { ok: true, id: session.id };
   } catch (error) {
-    return { ok: false, error: error instanceof Error ? error.message : "Could not save this entry." };
+    return { ok: false, error: error instanceof SessionInputError ? error.message : "Could not save this entry." };
   }
 }
 
@@ -94,7 +96,7 @@ export async function updateSession(input: SessionInput): Promise<ActionResult> 
     revalidateApp();
     return { ok: true, id: existing.id };
   } catch (error) {
-    return { ok: false, error: error instanceof Error ? error.message : "Could not update this entry." };
+    return { ok: false, error: error instanceof SessionInputError ? error.message : "Could not update this entry." };
   }
 }
 

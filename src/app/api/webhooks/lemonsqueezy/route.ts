@@ -23,6 +23,17 @@ function asDate(value: unknown) {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
+function asHttpsUrl(value: unknown) {
+  const raw = asString(value);
+  if (!raw) return null;
+  try {
+    const url = new URL(raw);
+    return url.protocol === "https:" ? url.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function POST(request: NextRequest) {
   const secret = process.env.LEMON_SQUEEZY_WEBHOOK_SECRET;
   if (!secret) {
@@ -87,7 +98,7 @@ export async function POST(request: NextRequest) {
   const currentPeriodEnd = endsAt ?? renewsAt;
   const status = (asString(attrs.status) ?? eventName.replace("subscription_", "")).toLowerCase();
   const urls = (attrs.urls ?? {}) as Record<string, unknown>;
-  const updateUrl = asString(urls.customer_portal);
+  const updateUrl = asHttpsUrl(urls.customer_portal);
 
   const data = {
     provider: "lemonsqueezy",

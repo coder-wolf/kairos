@@ -74,6 +74,7 @@ export default async function BillingPage({
   const error = params.error ? ERRORS[params.error] ?? "Something went wrong starting checkout." : null;
   const periodEnd = formatDate(billing?.currentPeriodEnd ?? billing?.endsAt ?? billing?.renewsAt ?? null, user.timezone);
   const isDemo = billing?.provider === "demo";
+  const manageUrl = billing?.updateUrl?.startsWith("https://") ? billing.updateUrl : null;
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -146,9 +147,9 @@ export default async function BillingPage({
                   ))}
                 </div>
                 <div className="flex flex-wrap items-center gap-2 border-t border-border pt-4">
-                  {billing?.updateUrl && !isDemo ? (
+                  {manageUrl && !isDemo ? (
                     <a
-                      href={billing.updateUrl}
+                      href={manageUrl}
                       target="_blank"
                       rel="noreferrer"
                       className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-border bg-surface px-3 text-[12px] font-semibold hover:bg-surface-2"

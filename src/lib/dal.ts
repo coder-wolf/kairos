@@ -12,16 +12,16 @@ import { isBillingEntitled, planSummary } from "./plan";
 export const verifySession = cache(async () => {
   const session = await getSession();
   if (!session?.userId) redirect("/login");
-  return { userId: session.userId };
+  return { userId: session.userId, sessionVersion: session.sessionVersion ?? 0 };
 });
 
 export const getCurrentUser = cache(async () => {
-  const { userId } = await verifySession();
+  const { userId, sessionVersion } = await verifySession();
   const user = await db.user.findUnique({
     where: { id: userId },
     include: { workspace: true, billing: true },
   });
-  if (!user?.workspace) redirect("/api/auth/clear");
+  if (!user?.workspace || user.sessionVersion !== sessionVersion) redirect("/api/auth/clear");
   return user;
 });
 

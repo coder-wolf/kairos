@@ -3,17 +3,18 @@
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import type { ActionResult, PreferencesInput, ProfileInput, WorkspaceInput } from "@/lib/action-types";
+import { sendVerificationForUser } from "@/lib/account-email";
 import { requireWorkspace, revalidateApp } from "@/lib/authz";
 import { db } from "@/lib/db";
 import { fromZonedTime } from "date-fns-tz";
-import { setThemeCookie } from "@/lib/session";
+import { createSession, setThemeCookie } from "@/lib/session";
 import { ITEM_PALETTE } from "@/lib/utils";
 
 export async function updateProfile(input: ProfileInput): Promise<ActionResult> {
   const { user } = await requireWorkspace();
   const parsed = z
     .object({
-      name: z.string().trim().min(2, "Name must be at least 2 characters."),
+      name: z.string().trim().min(2, "Name must be at least 2 characters.").max(80, "Keep your name under 80 characters."),
       email: z.string().trim().toLowerCase().email("Enter a valid email address."),
     })
     .safeParse(input);
@@ -27,9 +28,27 @@ export async function updateProfile(input: ProfileInput): Promise<ActionResult> 
   });
   if (clash) return { ok: false, error: "That email is already in use." };
 
-  await db.user.update({ where: { id: user.id }, data: parsed.data });
+  const emailChanged = parsed.data.email !== user.email;
+  const updated = await db.user.update({
+    where: { id: user.id },
+    data: {
+      ...parsed.data,
+      ...(emailChanged ? { emailVerifiedAt: null } : {}),
+    },
+    select: { id: true, name: true, email: true },
+  });
+
+  let message: string | undefined;
+  if (emailChanged) {
+    await db.authToken.deleteMany({ where: { userId: user.id, type: "EMAIL_VERIFICATION" } });
+    const sent = await sendVerificationForUser(updated);
+    message = sent
+      ? "Profile updated. Check your new inbox to verify this email."
+      : "Profile updated. Email verification couldn't be sent right now.";
+  }
+
   revalidateApp();
-  return { ok: true, id: user.id };
+  return { ok: true, id: user.id, message };
 }
 
 export async function updateWorkspace(input: WorkspaceInput): Promise<ActionResult> {
@@ -87,12 +106,22 @@ export async function updatePassword(currentPassword: string, newPassword: strin
   const valid = await bcrypt.compare(currentPassword, user.passwordHash);
   if (!valid) return { ok: false, error: "Your current password doesn't match." };
 
-  await db.user.update({
-    where: { id: user.id },
-    data: { passwordHash: await bcrypt.hash(newPassword, 10) },
-  });
+  const [updated] = await db.$transaction([
+    db.user.update({
+      where: { id: user.id },
+      data: {
+        passwordHash: await bcrypt.hash(newPassword, 10),
+        sessionVersion: { increment: 1 },
+      },
+      select: { sessionVersion: true },
+    }),
+    db.authToken.deleteMany({ where: { userId: user.id, type: "PASSWORD_RESET" } }),
+  ]);
 
-  return { ok: true };
+  // Keep this browser signed in while invalidating every other session.
+  await createSession(user.id, updated.sessionVersion);
+
+  return { ok: true, message: "Password updated. Other sessions have been signed out." };
 }
 
 export async function loadStarterWorkspace(): Promise<ActionResult> {

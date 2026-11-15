@@ -7,7 +7,15 @@ import { login, loginAsDemo, type AuthState } from "@/app/actions/auth";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/input";
 
-export function LoginForm({ demoMissing = false, resetSuccess = false }: { demoMissing?: boolean; resetSuccess?: boolean }) {
+export function LoginForm({
+  demoMissing = false,
+  demoRate = false,
+  resetSuccess = false,
+}: {
+  demoMissing?: boolean;
+  demoRate?: boolean;
+  resetSuccess?: boolean;
+}) {
   const [state, action, pending] = useActionState<AuthState, FormData>(login, undefined);
   const [showPassword, setShowPassword] = useState(false);
 
@@ -44,6 +52,12 @@ export function LoginForm({ demoMissing = false, resetSuccess = false }: { demoM
       {demoMissing ? (
         <div className="mb-5 rounded-xl border border-warning/20 bg-warning-soft px-4 py-3 text-[13px] font-medium text-warning">
           The demo workspace isn&apos;t seeded yet. Run <code className="font-mono">pnpm db:seed</code> and try again.
+        </div>
+      ) : null}
+
+      {demoRate ? (
+        <div className="mb-5 rounded-xl border border-warning/20 bg-warning-soft px-4 py-3 text-[13px] font-medium text-warning">
+          The demo workspace has had a lot of visits. Please try again in a little while.
         </div>
       ) : null}
 

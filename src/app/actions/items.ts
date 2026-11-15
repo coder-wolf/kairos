@@ -45,9 +45,9 @@ export async function createItem(input: ItemInput): Promise<ActionResult> {
       parentId: input.parentId,
       name,
       type: input.type && Object.values(ItemType).includes(input.type) ? input.type : null,
-      description: input.description?.trim() || null,
+      description: input.description?.trim().slice(0, 1000) || null,
       color: input.color ?? ITEM_PALETTE[siblings % ITEM_PALETTE.length],
-      icon: input.icon?.trim() || null,
+      icon: input.icon?.trim().slice(0, 4) || null,
       sortOrder: siblings,
     },
   });
@@ -71,9 +71,9 @@ export async function updateItem(input: ItemInput): Promise<ActionResult> {
     data: {
       name,
       type: input.type && Object.values(ItemType).includes(input.type) ? input.type : null,
-      description: input.description?.trim() || null,
+      description: input.description?.trim().slice(0, 1000) || null,
       color: input.color ?? existing.color,
-      icon: input.icon?.trim() || null,
+      icon: input.icon?.trim().slice(0, 4) || null,
     },
   });
 

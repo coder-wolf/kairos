@@ -13,6 +13,7 @@ model User {
   email        String   @unique
   passwordHash    String
   emailVerifiedAt DateTime?
+  sessionVersion  Int      @default(0)
   timezone        String   @default("UTC")
   weekStartsOn Int      @default(1)
   theme        String   @default("dark")
@@ -29,6 +30,13 @@ model User {
 enum AuthTokenType {
   EMAIL_VERIFICATION
   PASSWORD_RESET
+}
+
+model RateLimit {
+  key       String   @id
+  count     Int      @default(0)
+  resetAt   DateTime
+  updatedAt DateTime @updatedAt
 }
 
 model AuthToken {

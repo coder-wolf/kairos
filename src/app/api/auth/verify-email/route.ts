@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     db.authToken.deleteMany({ where: { userId: record.userId, type: "EMAIL_VERIFICATION" } }),
   ]);
 
-  await createSession(record.userId);
+  await createSession(record.userId, record.user.sessionVersion);
   await setThemeCookie(record.user.theme);
 
   return NextResponse.redirect(new URL("/dashboard?verified=1", request.url));

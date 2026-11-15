@@ -16,6 +16,7 @@ function getSecret() {
 
 export type SessionPayload = {
   userId: string;
+  sessionVersion?: number;
   expiresAt: string;
 };
 
@@ -40,9 +41,9 @@ export async function decrypt(token: string | undefined) {
   }
 }
 
-export async function createSession(userId: string) {
+export async function createSession(userId: string, sessionVersion = 0) {
   const expiresAt = new Date(Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000);
-  const token = await encrypt({ userId, expiresAt: expiresAt.toISOString() });
+  const token = await encrypt({ userId, sessionVersion, expiresAt: expiresAt.toISOString() });
   const cookieStore = await cookies();
 
   cookieStore.set(COOKIE_NAME, token, {

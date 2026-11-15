@@ -20,14 +20,18 @@ function useSaver() {
   const [pending, startTransition] = React.useTransition();
   return {
     pending,
-    save: (action: () => Promise<{ ok: boolean; error?: string }>, success: string, onSuccess?: () => void) => {
+    save: (
+      action: () => Promise<{ ok: boolean; error?: string; message?: string }>,
+      success: string,
+      onSuccess?: () => void,
+    ) => {
       startTransition(async () => {
         const result = await action();
         if (!result.ok) {
           toast.error(result.error ?? "Something went wrong.");
           return;
         }
-        toast.success(success);
+        toast.success(result.message ?? success);
         onSuccess?.();
         router.refresh();
       });

@@ -1,19 +1,9 @@
 "use server";
 
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { getAppUrl } from "@/lib/app-url";
 import { requireWorkspace } from "@/lib/authz";
 import { getBillingAccount, getPlanForUser } from "@/lib/billing";
-
-async function appUrl() {
-  const configured = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "");
-  if (configured) return configured;
-  const headerStore = await headers();
-  const host = headerStore.get("x-forwarded-host") ?? headerStore.get("host");
-  const proto = headerStore.get("x-forwarded-proto") ?? (host?.includes("localhost") ? "http" : "https");
-  if (host) return `${proto}://${host}`;
-  return "http://localhost:3000";
-}
 
 export async function startCheckout(formData: FormData) {
   const interval = formData.get("interval") === "yearly" ? "yearly" : "monthly";
@@ -36,7 +26,7 @@ export async function startCheckout(formData: FormData) {
     redirect("/billing?error=not_configured");
   }
 
-  const origin = await appUrl();
+  const origin = await getAppUrl();
   const redirectUrl = `${origin}/billing?checkout=success`;
 
   let checkoutUrl: string | undefined;

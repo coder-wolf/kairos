@@ -21,7 +21,11 @@ export default async function LoginPage({
 
   return (
     <AuthShell>
-      <LoginForm demoMissing={params.demo === "missing"} resetSuccess={params.reset === "success"} />
+      <LoginForm
+        demoMissing={params.demo === "missing"}
+        demoRate={params.demo === "rate"}
+        resetSuccess={params.reset === "success"}
+      />
     </AuthShell>
   );
 }

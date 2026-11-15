@@ -5,7 +5,10 @@ import { getSession } from "@/lib/session";
 export async function GET() {
   const session = await getSession();
   if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json(
+      { error: "Unauthorized" },
+      { status: 401, headers: { "Cache-Control": "private, no-store" } },
+    );
   }
 
   const user = await db.user.findUnique({
@@ -22,7 +25,17 @@ export async function GET() {
   });
 
   if (!user?.workspace) {
-    return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
+    return NextResponse.json(
+      { error: "Workspace not found" },
+      { status: 404, headers: { "Cache-Control": "private, no-store" } },
+    );
+  }
+
+  if (user.sessionVersion !== (session.sessionVersion ?? 0)) {
+    return NextResponse.json(
+      { error: "Session expired" },
+      { status: 401, headers: { "Cache-Control": "private, no-store" } },
+    );
   }
 
   const payload = {
@@ -76,6 +89,8 @@ export async function GET() {
     headers: {
       "Content-Type": "application/json",
       "Content-Disposition": `attachment; filename="kairos-export-${date}.json"`,
+      "Cache-Control": "private, no-store",
+      Vary: "Cookie",
     },
   });
 }
