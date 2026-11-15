@@ -185,6 +185,7 @@ export default async function DashboardPage() {
     type: item.type,
     icon: item.icon,
     color: item.color,
+    sortOrder: item.sortOrder,
     seconds: totals.get(item.id) ?? 0,
     goalCount: activeGoals.filter((goal) => goalSubtreeCache.get(item.id)?.has(goal.itemId)).length,
     childCount: activeItems.filter((candidate) => candidate.parentId === item.id).length,

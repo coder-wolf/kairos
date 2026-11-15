@@ -77,6 +77,7 @@ export type AreaNode = {
   type: string | null;
   icon: string | null;
   color: string | null;
+  sortOrder: number;
   seconds: number;
   goalCount: number;
   childCount: number;

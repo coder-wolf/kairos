@@ -19,7 +19,7 @@ function buildTree(nodes: AreaNode[]): Node[] {
     else roots.push(node);
   }
   const sort = (list: Node[], depth: number) => {
-    list.sort((a, b) => b.seconds - a.seconds || a.name.localeCompare(b.name));
+    list.sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name));
     for (const node of list) {
       node.depth = depth;
       sort(node.children, depth + 1);
