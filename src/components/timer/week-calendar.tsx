@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { formatInTimeZone } from "date-fns-tz";
+import { LocateFixed } from "lucide-react";
 import { useQuickActions } from "@/components/quick-actions";
 import { endOfDayKey, startOfDayKey } from "@/lib/time";
 import type { SessionRow } from "@/lib/types";
@@ -93,8 +94,10 @@ export function WeekCalendar({
   }, []);
 
   React.useEffect(() => {
-    if (scrollRef.current) scrollRef.current.scrollTop = 7 * ROW_HEIGHT;
-  }, []);
+    if (!scrollRef.current) return;
+    const hour = Number(formatInTimeZone(new Date(), timezone, "H"));
+    scrollRef.current.scrollTop = Math.max(0, hour * ROW_HEIGHT - 160);
+  }, [timezone]);
 
   const byDay = React.useMemo(() => {
     const map = new Map<string, Segment[]>();
@@ -132,8 +135,30 @@ export function WeekCalendar({
     return hour * 60 + minute;
   }, [now, timezone]);
 
+  const dayTotals = React.useMemo(() => {
+    const totals = new Map<string, number>();
+    for (const [key, segments] of byDay.entries()) {
+      let seconds = 0;
+      for (const segment of segments) seconds += (segment.end.getTime() - segment.start.getTime()) / 1000;
+      totals.set(key, Math.round(seconds));
+    }
+    return totals;
+  }, [byDay]);
+
   const today = days.find((day) => day.isToday);
   const total = sessions.reduce((acc, session) => acc + session.durationSeconds, 0);
+
+  const addTimeAt = (dayKey: string, clientY: number, element: HTMLElement) => {
+    const rect = element.getBoundingClientRect();
+    const rawMinutes = ((clientY - rect.top) / ROW_HEIGHT) * 60;
+    const minutes = Math.max(0, Math.min(23 * 60 + 45, Math.round(rawMinutes / 15) * 15));
+    const hour = Math.floor(minutes / 60);
+    const minute = minutes % 60;
+    openManualTime({
+      date: dayKey,
+      startTime: `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`,
+    });
+  };
 
   return (
     <section className="card overflow-hidden">
@@ -144,9 +169,23 @@ export function WeekCalendar({
             {sessions.length} {sessions.length === 1 ? "entry" : "entries"} · {formatDuration(total)} tracked
           </p>
         </div>
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.12em] text-muted-2">
-          <span className="h-1.5 w-1.5 rounded-full bg-primary" /> Click a block to edit
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="hidden items-center gap-1.5 rounded-full border border-border bg-surface px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.12em] text-muted-2 sm:inline-flex">
+            <span className="h-1.5 w-1.5 rounded-full bg-primary" /> Click a slot to add · click a block to edit
+          </span>
+          <button
+            type="button"
+            onClick={() =>
+              scrollRef.current?.scrollTo({
+                top: Math.max(0, (nowMinutes / 60) * ROW_HEIGHT - 160),
+                behavior: "smooth",
+              })
+            }
+            className="inline-flex h-7 items-center gap-1 rounded-full border border-border bg-surface px-2.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-muted transition-colors hover:border-primary/30 hover:bg-primary-soft hover:text-primary"
+          >
+            <LocateFixed className="h-3 w-3" /> Now
+          </button>
+        </div>
       </div>
 
       <div className="scroll-thin overflow-x-auto">
@@ -174,6 +213,9 @@ export function WeekCalendar({
                   >
                     {day.dayNumber}
                   </p>
+                  <span className="text-[8px] font-semibold tabular-nums text-muted-2">
+                    {formatDuration(dayTotals.get(day.key) ?? 0, { zero: "—" })}
+                  </span>
                 </div>
               ))}
             </div>
@@ -194,8 +236,9 @@ export function WeekCalendar({
                 {days.map((day) => (
                   <div
                     key={day.key}
+                    onClick={(event) => addTimeAt(day.key, event.clientY, event.currentTarget)}
                     className={cn(
-                      "relative border-l border-border/60",
+                      "relative cursor-crosshair border-l border-border/60 transition-colors hover:bg-primary-soft/10",
                       day.isWeekend && "bg-surface-2/25",
                       day.isToday && "bg-primary-soft/20",
                     )}
@@ -216,7 +259,10 @@ export function WeekCalendar({
                         <button
                           key={`${segment.session.id}-${segment.startMin}-${segment.lane}`}
                           type="button"
-                          onClick={() => openManualTime({ itemId: segment.session.itemId, session: segment.session })}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            openManualTime({ itemId: segment.session.itemId, session: segment.session });
+                          }}
                           className="absolute z-10 overflow-hidden rounded-lg px-1.5 py-1 text-left transition-all duration-150 hover:z-20 hover:-translate-y-px hover:shadow-[0_5px_16px_-6px_rgba(15,15,25,0.35)]"
                           style={{
                             top,

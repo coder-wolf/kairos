@@ -13,7 +13,7 @@ type QuickActionsContextValue = {
   openEditItem: (id: string) => void;
   openNewGoal: (itemId?: string) => void;
   openEditGoal: (id: string) => void;
-  openManualTime: (options?: { itemId?: string; session?: SessionRow }) => void;
+  openManualTime: (options?: { itemId?: string; session?: SessionRow; date?: string; startTime?: string }) => void;
   startTimerNow: () => void;
   openCommandPalette: () => void;
 };
@@ -51,6 +51,8 @@ export function QuickActionsProvider({
     open: boolean;
     itemId?: string;
     session?: SessionRow;
+    date?: string;
+    startTime?: string;
   }>({ open: false });
   const [commandOpen, setCommandOpen] = React.useState(false);
   const { start } = useTimer();
@@ -62,7 +64,13 @@ export function QuickActionsProvider({
       openNewGoal: (itemId) => setGoalDialog({ open: true, itemId }),
       openEditGoal: (id) => setGoalDialog({ open: true, initialId: id }),
       openManualTime: (options) =>
-        setTimeDialog({ open: true, itemId: options?.itemId, session: options?.session }),
+        setTimeDialog({
+          open: true,
+          itemId: options?.itemId,
+          session: options?.session,
+          date: options?.date,
+          startTime: options?.startTime,
+        }),
       startTimerNow: () => start(),
       openCommandPalette: () => setCommandOpen(true),
     }),
@@ -108,6 +116,8 @@ export function QuickActionsProvider({
         items={items}
         initial={timeDialog.session ?? null}
         defaultItemId={timeDialog.itemId}
+        defaultDate={timeDialog.date}
+        defaultStartTime={timeDialog.startTime}
         timezone={user.timezone}
         todayKey={todayKey}
       />

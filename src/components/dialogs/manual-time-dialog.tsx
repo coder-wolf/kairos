@@ -20,6 +20,8 @@ type ManualTimeDialogProps = {
   items: ItemOption[];
   initial?: SessionRow | null;
   defaultItemId?: string;
+  defaultDate?: string;
+  defaultStartTime?: string;
   timezone: string;
   todayKey: string;
 };
@@ -28,7 +30,7 @@ export function ManualTimeDialog(props: ManualTimeDialogProps) {
   if (!props.open) return null;
   return (
     <ManualTimeDialogBody
-      key={`${props.initial?.id ?? "new"}-${props.defaultItemId ?? ""}`}
+      key={`${props.initial?.id ?? "new"}-${props.defaultItemId ?? ""}-${props.defaultDate ?? ""}-${props.defaultStartTime ?? ""}`}
       {...props}
     />
   );
@@ -39,6 +41,8 @@ function ManualTimeDialogBody({
   items,
   initial,
   defaultItemId,
+  defaultDate,
+  defaultStartTime,
   timezone,
   todayKey,
 }: ManualTimeDialogProps) {
@@ -47,10 +51,10 @@ function ManualTimeDialogBody({
   const initialTotal = initial ? initial.durationSeconds / 60 : 30;
   const [itemId, setItemId] = React.useState(initial?.itemId ?? defaultItemId ?? "");
   const [date, setDate] = React.useState(
-    initial ? formatInTimeZone(new Date(initial.startTime), timezone, "yyyy-MM-dd") : todayKey,
+    initial ? formatInTimeZone(new Date(initial.startTime), timezone, "yyyy-MM-dd") : defaultDate ?? todayKey,
   );
   const [startTime, setStartTime] = React.useState(
-    initial ? formatInTimeZone(new Date(initial.startTime), timezone, "HH:mm") : "",
+    initial ? formatInTimeZone(new Date(initial.startTime), timezone, "HH:mm") : defaultStartTime ?? "",
   );
   const [hours, setHours] = React.useState(String(Math.floor(initialTotal / 60)));
   const [minutes, setMinutes] = React.useState(String(Math.round(initialTotal % 60)));
