@@ -153,7 +153,7 @@ Kairos is free for everyday time tracking, with an optional Pro plan.
 | Flexible projects and hierarchy | ✓ | ✓ |
 | Weekly timer calendar | ✓ | ✓ |
 | Dashboard and core goals | ✓ | ✓ |
-| Active items | 15 | Unlimited |
+| Active items | 5 | Unlimited |
 | Active goals | 3 | Unlimited |
 | Pomodoro | — | ✓ |
 | Advanced analytics | — | ✓ |

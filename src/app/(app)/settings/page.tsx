@@ -174,7 +174,7 @@ export default async function SettingsPage() {
             <p className="mt-1.5 text-[11px] leading-5 text-muted">
               {user.isPro
                 ? "You're on Kairos Pro. Unlimited projects, goals, Pomodoro, and advanced analytics are unlocked."
-                : "You're on the free plan with up to 15 active projects, 3 goals, and core time tracking."}
+                : "You're on the free plan with up to 5 active projects, 3 goals, and core time tracking."}
             </p>
             <Link
               href="/billing"

@@ -1,4 +1,4 @@
-export const FREE_ITEM_LIMIT = 15;
+export const FREE_ITEM_LIMIT = 5;
 export const FREE_GOAL_LIMIT = 3;
 
 export type BillingAccountLike =
