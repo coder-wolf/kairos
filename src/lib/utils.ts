@@ -5,6 +5,33 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+export const ITEM_EMOJIS = [
+  "🌿",
+  "🚀",
+  "💼",
+  "📚",
+  "🎯",
+  "🧠",
+  "🛠️",
+  "🎨",
+  "💡",
+  "🧭",
+  "🌱",
+  "🔥",
+  "⚡",
+  "🧩",
+  "📈",
+  "🗂️",
+  "🏗️",
+  "🧪",
+  "🎵",
+  "🏡",
+];
+
+export function randomItemEmoji() {
+  return ITEM_EMOJIS[Math.floor(Math.random() * ITEM_EMOJIS.length)];
+}
+
 export const ITEM_PALETTE = [
   "#6366f1",
   "#8b5cf6",

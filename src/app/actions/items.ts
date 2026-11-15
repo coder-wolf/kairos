@@ -8,7 +8,7 @@ import { getPlanForUser } from "@/lib/billing";
 import { FREE_ITEM_LIMIT } from "@/lib/plan";
 import { getSubtreeIds } from "@/lib/items";
 import { stopTimerForUser } from "@/lib/timer-service";
-import { ITEM_PALETTE } from "@/lib/utils";
+import { ITEM_PALETTE, randomItemEmoji } from "@/lib/utils";
 
 export async function createItem(input: ItemInput): Promise<ActionResult> {
   const { user, workspace } = await requireWorkspace();
@@ -47,7 +47,7 @@ export async function createItem(input: ItemInput): Promise<ActionResult> {
       type: input.type && Object.values(ItemType).includes(input.type) ? input.type : null,
       description: input.description?.trim().slice(0, 1000) || null,
       color: input.color ?? ITEM_PALETTE[siblings % ITEM_PALETTE.length],
-      icon: input.icon?.trim().slice(0, 4) || null,
+      icon: input.icon?.trim().slice(0, 4) || randomItemEmoji(),
       sortOrder: siblings,
     },
   });
