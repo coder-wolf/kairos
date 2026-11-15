@@ -68,7 +68,6 @@ export function LoginForm({
             type="email"
             autoComplete="email"
             placeholder="you@example.com"
-            defaultValue="demo@kairos.app"
             required
           />
         </Field>
@@ -80,7 +79,6 @@ export function LoginForm({
               type={showPassword ? "text" : "password"}
               autoComplete="current-password"
               placeholder="Your password"
-              defaultValue="demo1234"
               className="pr-11"
               required
             />
