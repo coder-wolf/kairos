@@ -3,9 +3,10 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { formatInTimeZone } from "date-fns-tz";
-import { Clock, NotebookPen } from "lucide-react";
+import { Clock, NotebookPen, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { createSession, updateSession } from "@/app/actions/sessions";
+import { createSession, deleteSession, updateSession } from "@/app/actions/sessions";
+import { ConfirmDialog } from "@/components/dialogs/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
@@ -55,6 +56,7 @@ function ManualTimeDialogBody({
   const [minutes, setMinutes] = React.useState(String(Math.round(initialTotal % 60)));
   const [description, setDescription] = React.useState(initial?.description ?? "");
   const [error, setError] = React.useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = React.useState(false);
 
   const itemOptions = flattenItemOptions(items);
   const totalMinutes = Math.max(0, Math.round(Number(hours || 0) * 60 + Number(minutes || 0)));
@@ -170,16 +172,51 @@ function ManualTimeDialogBody({
             </p>
           ) : null}
 
-          <DialogFooter>
-            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" loading={pending} disabled={!itemId || totalMinutes < 1}>
-              {initial ? "Save changes" : "Add time"}
-            </Button>
+          <DialogFooter className="sm:justify-between">
+            {initial ? (
+              <Button
+                type="button"
+                variant="ghost"
+                className="gap-1.5 text-danger hover:bg-danger-soft hover:text-danger"
+                onClick={() => setConfirmDelete(true)}
+              >
+                <Trash2 className="h-3.5 w-3.5" /> Delete entry
+              </Button>
+            ) : (
+              <span />
+            )}
+            <div className="flex items-center gap-2">
+              <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" loading={pending} disabled={!itemId || totalMinutes < 1}>
+                {initial ? "Save changes" : "Add time"}
+              </Button>
+            </div>
           </DialogFooter>
         </form>
       </DialogContent>
+
+      {initial ? (
+        <ConfirmDialog
+          open={confirmDelete}
+          onOpenChange={setConfirmDelete}
+          title="Delete this time entry?"
+          description={`${formatDuration(initial.durationSeconds)} on ${initial.itemName} will be removed. Parent totals and goals will update immediately.`}
+          confirmLabel="Delete entry"
+          destructive
+          onConfirm={async () => {
+            const result = await deleteSession(initial.id);
+            if (result.ok) {
+              toast.success("Time entry deleted");
+              setConfirmDelete(false);
+              onOpenChange(false);
+              router.refresh();
+            }
+            return result;
+          }}
+        />
+      ) : null}
     </Dialog>
   );
 }
