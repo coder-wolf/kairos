@@ -17,7 +17,7 @@ export async function GET() {
       workspace: {
         include: {
           items: { orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] },
-          goals: true,
+          goals: { include: { items: true } },
           timeSessions: { orderBy: { startTime: "asc" } },
         },
       },
@@ -63,6 +63,7 @@ export async function GET() {
       goals: user.workspace.goals.map((goal) => ({
         id: goal.id,
         itemId: goal.itemId,
+        itemIds: goal.items.map((entry) => entry.itemId),
         name: goal.name,
         targetSeconds: goal.targetSeconds,
         periodType: goal.periodType,

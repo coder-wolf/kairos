@@ -94,7 +94,7 @@ export const getAppContext = cache(async (): Promise<AppContext> => {
     db.goal.findMany({
       where: { workspaceId: workspace.id },
       orderBy: [{ createdAt: "asc" }],
-      include: { item: true },
+      include: { item: true, items: { include: { item: true } } },
     }),
     db.timerState.findUnique({
       where: { userId: user.id },
@@ -124,11 +124,18 @@ export function toItemOptions(items: Item[]): ItemOption[] {
   }));
 }
 
-export function toGoalSummaries(goals: (Goal & { item: Item })[]): GoalSummary[] {
-  return goals.map((goal) => ({
+export function toGoalSummaries(goals: (Goal & { item: Item; items?: Array<{ item: Item }> })[]): GoalSummary[] {
+  return goals.map((goal) => {
+    const linked = goal.items?.length ? goal.items.map((entry) => entry.item) : [goal.item];
+    const unique = new Map(linked.map((item) => [item.id, item]));
+    const items = Array.from(unique.values());
+    const primary = items[0] ?? goal.item;
+    return {
     id: goal.id,
-    itemId: goal.itemId,
-    itemName: goal.item.name,
+    itemId: primary.id,
+    itemName: items.map((item) => item.name).join(" · "),
+    itemIds: items.map((item) => item.id),
+    itemNames: items.map((item) => item.name),
     name: goal.name,
     targetSeconds: goal.targetSeconds,
     periodType: goal.periodType,
@@ -137,8 +144,9 @@ export function toGoalSummaries(goals: (Goal & { item: Item })[]): GoalSummary[]
     endDate: goal.endDate ? goal.endDate.toISOString() : null,
     status: goal.status,
     reminder: goal.reminder,
-    color: goal.item.color,
-  }));
+    color: primary.color,
+    };
+  });
 }
 
 export function toSessionRows(sessions: Array<{

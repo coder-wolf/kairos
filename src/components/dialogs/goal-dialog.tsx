@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { createGoal, updateGoal } from "@/app/actions/goals";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Field, Input, Select } from "@/components/ui/input";
+import { Field, Input } from "@/components/ui/input";
 import { addDaysToKey } from "@/lib/time";
 import type { GoalSummary, ItemOption } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -65,7 +65,15 @@ function GoalDialogBody({
   const initialMinutes = initial ? initial.targetSeconds / 60 : 60;
 
   const [name, setName] = React.useState(initial?.name ?? "");
-  const [itemId, setItemId] = React.useState(initial?.itemId ?? defaultItemId ?? "");
+  const [itemIds, setItemIds] = React.useState<string[]>(
+    initial?.itemIds?.length
+      ? initial.itemIds
+      : initial?.itemId
+        ? [initial.itemId]
+        : defaultItemId
+          ? [defaultItemId]
+          : [],
+  );
   const [value, setValue] = React.useState(
     initial
       ? initialPeriod === "DAILY"
@@ -95,13 +103,18 @@ function GoalDialogBody({
     setDays((current) => (current.includes(day) ? current.filter((entry) => entry !== day) : [...current, day]));
   };
 
+  const toggleItem = (id: string) => {
+    setItemIds((current) => (current.includes(id) ? current.filter((entry) => entry !== id) : [...current, id]));
+  };
+
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
     setError(null);
     startTransition(async () => {
       const payload = {
         id: initial?.id,
-        itemId,
+        itemId: itemIds[0] ?? "",
+        itemIds,
         name,
         targetMinutes: Math.round(minutes),
         periodType: periodType as "DAILY" | "WEEKLY" | "MONTHLY" | "CUSTOM",
@@ -133,29 +146,63 @@ function GoalDialogBody({
         </DialogHeader>
 
         <form onSubmit={submit} className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Goal name">
-              <Input
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                placeholder="Defaults to the item name"
-                maxLength={80}
-              />
-            </Field>
-            <Field label="Item">
-              <Select value={itemId} onChange={(event) => setItemId(event.target.value)} required>
-                <option value="" disabled>
-                  Choose an item
-                </option>
-                {itemOptions.map((option) => (
-                  <option key={option.id} value={option.id}>
-                    {"— ".repeat(option.depth)}
-                    {option.label}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-          </div>
+          <Field label="Goal name">
+            <Input
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              placeholder="Defaults to the selected project names"
+              maxLength={80}
+            />
+          </Field>
+
+          <Field
+            label="Projects"
+            hint="Time tracked on these projects and everything beneath them counts toward this goal."
+          >
+            <div className="max-h-48 space-y-0.5 overflow-y-auto rounded-xl border border-border bg-surface p-1.5">
+              {itemOptions.map((option) => {
+                const selected = itemIds.includes(option.id);
+                return (
+                  <label
+                    key={option.id}
+                    className={cn(
+                      "flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 transition-colors",
+                      selected ? "bg-primary-soft text-primary" : "text-muted hover:bg-surface-2 hover:text-text",
+                    )}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selected}
+                      onChange={() => toggleItem(option.id)}
+                      className="size-3.5 shrink-0 accent-[var(--primary)]"
+                    />
+                    <span
+                      className="grid h-6 w-6 shrink-0 place-items-center rounded-md text-[12px]"
+                      style={{ background: `${option.color ?? "#6366f1"}14`, color: option.color ?? "#6366f1" }}
+                    >
+                      {option.icon ?? "•"}
+                    </span>
+                    <span
+                      className="truncate text-[12px] font-semibold"
+                      style={{ paddingLeft: option.depth * 8 }}
+                    >
+                      {option.label}
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+            <div className="mt-2 flex items-center justify-between text-[10px] font-semibold text-muted-2">
+              <span>
+                {itemIds.length} {itemIds.length === 1 ? "project" : "projects"} selected
+              </span>
+              {itemIds.length > 0 ? (
+                <button type="button" onClick={() => setItemIds([])} className="hover:text-primary">
+                  Clear
+                </button>
+              ) : null}
+            </div>
+          </Field>
 
           <div className="rounded-xl border border-border bg-surface-2/50 p-4">
             <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.14em] text-muted">
@@ -310,7 +357,7 @@ function GoalDialogBody({
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" loading={pending} disabled={!itemId || minutes < 1}>
+            <Button type="submit" loading={pending} disabled={itemIds.length === 0 || minutes < 1}>
               {initial ? "Save goal" : "Create goal"}
             </Button>
           </DialogFooter>

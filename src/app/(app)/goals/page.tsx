@@ -4,7 +4,7 @@ import { GoalsSpreadsheet, type GoalsSpreadsheetRow, type SpreadsheetDay } from 
 import { UpgradeBanner } from "@/components/billing/upgrade-banner";
 import { NewGoalButton } from "@/components/goals/new-goal-button";
 import { getAppContext, toGoalSummaries } from "@/lib/dal";
-import { computeGoalProgress, computeStreaks, dailyTotalsForGoal } from "@/lib/goals";
+import { computeGoalProgress, computeStreaks, dailyTotalsForGoal, goalItemIds } from "@/lib/goals";
 import { getSessionsWindow } from "@/lib/queries";
 import { getAncestorPath } from "@/lib/items";
 import { FREE_GOAL_LIMIT } from "@/lib/plan";
@@ -97,9 +97,9 @@ export default async function GoalsPage({
 
     return {
       goal: toGoalSummaries([goal])[0],
-      itemPath: getAncestorPath(items, goal.itemId)
-        .map((item) => item.name)
-        .join(" / "),
+      itemPath: goalItemIds(goal)
+        .map((id) => getAncestorPath(items, id).map((entry) => entry.name).join(" / "))
+        .join(" · "),
       progress: {
         actualSeconds: progress.actualSeconds,
         targetSeconds: progress.targetSeconds,

@@ -24,7 +24,7 @@ import { buildTrend, totalSeconds } from "@/lib/analytics";
 import { getAppContext, toGoalSummaries, toItemOptions, toSessionRows } from "@/lib/dal";
 import { db } from "@/lib/db";
 import { aggregateByItem, getAncestorPath, getSubtreeIds } from "@/lib/items";
-import { computeGoalProgress, computeStreaks } from "@/lib/goals";
+import { computeGoalProgress, computeStreaks, goalItemIds } from "@/lib/goals";
 import { getSessionsWindow } from "@/lib/queries";
 import { addDaysToKey, getDateRange, overlapSeconds, toDateKey } from "@/lib/time";
 import { formatDuration, paletteColor, pluralize } from "@/lib/utils";
@@ -65,9 +65,9 @@ export default async function ItemPage({ params }: { params: Promise<{ id: strin
   const ancestorIds = new Set(ancestors.map((ancestor) => ancestor.id));
   const subtree = getSubtreeIds(items, item.id);
 
-  const directGoals = goals.filter((goal) => goal.itemId === item.id && goal.status !== "ARCHIVED");
+  const directGoals = goals.filter((goal) => goalItemIds(goal).includes(item.id) && goal.status !== "ARCHIVED");
   const inheritedGoals = goals.filter(
-    (goal) => ancestorIds.has(goal.itemId) && goal.status === "ACTIVE",
+    (goal) => goal.status === "ACTIVE" && goalItemIds(goal).some((id) => ancestorIds.has(id)),
   );
 
   const relevantGoals = [...directGoals, ...inheritedGoals];
@@ -118,7 +118,7 @@ export default async function ItemPage({ params }: { params: Promise<{ id: strin
       color: child.color,
       type: child.type,
       seconds: totalsWeek.get(child.id) ?? 0,
-      goalCount: activeGoals.filter((goal) => childSubtree.has(goal.itemId)).length,
+      goalCount: activeGoals.filter((goal) => goalItemIds(goal).some((id) => childSubtree.has(id))).length,
       descendantCount: childSubtree.size - 1,
     };
   });
@@ -210,7 +210,7 @@ export default async function ItemPage({ params }: { params: Promise<{ id: strin
             label: "Sub-items",
             value: String(Math.max(0, subtree.size - 1)),
             icon: Layers,
-            sub: `${activeGoals.filter((goal) => subtree.has(goal.itemId)).length} goals inside`,
+            sub: `${activeGoals.filter((goal) => goalItemIds(goal).some((id) => subtree.has(id))).length} goals inside`,
           },
         ].map((stat) => (
           <div key={stat.label} className="rounded-2xl border border-border bg-surface p-4">
@@ -418,7 +418,7 @@ export default async function ItemPage({ params }: { params: Promise<{ id: strin
               </div>
               <div className="flex items-center justify-between px-5 py-3">
                 <dt className="text-muted">Active goals inside</dt>
-                <dd className="font-semibold">{activeGoals.filter((goal) => subtree.has(goal.itemId)).length}</dd>
+                <dd className="font-semibold">{activeGoals.filter((goal) => goalItemIds(goal).some((id) => subtree.has(id))).length}</dd>
               </div>
               <div className="flex items-center justify-between px-5 py-3">
                 <dt className="text-muted">Created</dt>

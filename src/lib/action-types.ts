@@ -21,6 +21,7 @@ export type ItemInput = {
 export type GoalInput = {
   id?: string;
   itemId: string;
+  itemIds?: string[];
   name?: string;
   targetMinutes: number;
   periodType: PeriodType;

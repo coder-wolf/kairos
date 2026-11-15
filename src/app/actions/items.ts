@@ -178,6 +178,26 @@ export async function deleteItem(id: string): Promise<ActionResult> {
   if (!item) return { ok: false, error: "Item not found." };
   if (item.isSystem) return { ok: false, error: "The system item can't be deleted." };
 
+  const items = await db.item.findMany({ where: { workspaceId: workspace.id } });
+  const subtree = getSubtreeIds(items, id);
+
+  // Goals can track several projects. If the primary item is being deleted but
+  // the goal still has another project, keep the goal and promote a survivor.
+  const affectedGoals = await db.goal.findMany({
+    where: { workspaceId: workspace.id, itemId: { in: Array.from(subtree) } },
+    include: { items: { select: { itemId: true } } },
+  });
+
+  for (const goal of affectedGoals) {
+    const remaining = goal.items.map((entry) => entry.itemId).filter((itemId) => !subtree.has(itemId));
+    if (remaining.length === 0) continue;
+
+    await db.$transaction([
+      db.goal.update({ where: { id: goal.id }, data: { itemId: remaining[0] } }),
+      db.goalItem.deleteMany({ where: { goalId: goal.id, itemId: { in: Array.from(subtree) } } }),
+    ]);
+  }
+
   // The self-relation and session/goal relations cascade, so removing the
   // root removes the whole branch in one operation.
   await db.item.delete({ where: { id } });

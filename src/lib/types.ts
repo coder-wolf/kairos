@@ -32,6 +32,8 @@ export type GoalSummary = {
   id: string;
   itemId: string;
   itemName: string;
+  itemIds: string[];
+  itemNames: string[];
   name: string;
   targetSeconds: number;
   periodType: PeriodType;

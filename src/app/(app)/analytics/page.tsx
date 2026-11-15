@@ -21,7 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { buildTrend, hourOfDayTotals, totalSeconds, weekdayAverages } from "@/lib/analytics";
 import { getAppContext, toItemOptions } from "@/lib/dal";
 import { aggregateByItem, getSubtreeIds } from "@/lib/items";
-import { computeGoalProgress, computeStreaks } from "@/lib/goals";
+import { computeGoalProgress, computeStreaks, goalItemIds } from "@/lib/goals";
 import { getEarliestSession, getSessionsWindow } from "@/lib/queries";
 import {
   dayKeysBetween,
@@ -224,7 +224,7 @@ export default async function AnalyticsPage({
       return {
         id: goal.id,
         name: goal.name,
-        itemId: goal.itemId,
+        itemId: goalItemIds(goal)[0] ?? goal.itemId,
         color: goal.item.color,
         percent: progress.percent,
         status: progress.status,

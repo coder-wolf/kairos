@@ -24,7 +24,7 @@ import { SessionTable } from "@/components/sessions/session-table";
 import { buildTrend, totalSeconds } from "@/lib/analytics";
 import { getAppContext, toGoalSummaries, toSessionRows } from "@/lib/dal";
 import { aggregateByItem, getSubtreeIds } from "@/lib/items";
-import { computeGoalProgress, computeHabitDays, computeStreaks } from "@/lib/goals";
+import { computeGoalProgress, computeHabitDays, computeStreaks, goalItemIds, goalTouchesSubtree } from "@/lib/goals";
 import { getRecentSessions, getSessionsWindow } from "@/lib/queries";
 import { getDateRange } from "@/lib/time";
 import { formatDuration, pluralize } from "@/lib/utils";
@@ -148,12 +148,14 @@ export default async function DashboardPage() {
   const topStreak = habitGoals[0]?.streak.current ?? 0;
   const bestStreak = habitGoals.reduce((acc, entry) => Math.max(acc, entry.streak.longest), 0);
 
-  const goalItemIds = new Set<string>();
+  const goalItemIdSet = new Set<string>();
   for (const goal of activeGoals) {
-    for (const id of getSubtreeIds(items, goal.itemId)) goalItemIds.add(id);
+    for (const goalItemId of goalItemIds(goal)) {
+      for (const id of getSubtreeIds(items, goalItemId)) goalItemIdSet.add(id);
+    }
   }
   const goalDirectedSeconds = totalSeconds(
-    weekSessions.filter((session) => goalItemIds.has(session.itemId)),
+    weekSessions.filter((session) => goalItemIdSet.has(session.itemId)),
     week.start,
     week.end,
   );
@@ -187,7 +189,7 @@ export default async function DashboardPage() {
     color: item.color,
     sortOrder: item.sortOrder,
     seconds: totals.get(item.id) ?? 0,
-    goalCount: activeGoals.filter((goal) => goalSubtreeCache.get(item.id)?.has(goal.itemId)).length,
+    goalCount: activeGoals.filter((goal) => goalTouchesSubtree(goal, goalSubtreeCache.get(item.id) ?? new Set())).length,
     childCount: activeItems.filter((candidate) => candidate.parentId === item.id).length,
   }));
 

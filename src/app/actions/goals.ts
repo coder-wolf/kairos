@@ -41,15 +41,34 @@ function cleanDays(days: number[]) {
   return Array.from(new Set(days.filter((day) => Number.isInteger(day) && day >= 0 && day <= 6))).sort();
 }
 
+function requestedItemIds(input: GoalInput) {
+  const values = input.itemIds?.length ? input.itemIds : input.itemId ? [input.itemId] : [];
+  return Array.from(new Set(values.filter(Boolean)));
+}
+
+async function resolveGoalItems(workspaceId: string, input: GoalInput) {
+  const ids = requestedItemIds(input);
+  if (ids.length === 0) return { ok: false as const, error: "Pick at least one project for this goal." };
+
+  const found = await db.item.findMany({
+    where: { id: { in: ids }, workspaceId },
+  });
+  const byId = new Map(found.map((item) => [item.id, item]));
+  const items = ids.map((id) => byId.get(id)).filter((item): item is NonNullable<typeof item> => Boolean(item));
+  if (items.length !== ids.length) {
+    return { ok: false as const, error: "One or more selected projects no longer exist." };
+  }
+  return { ok: true as const, items, ids };
+}
+
 export async function createGoal(input: GoalInput): Promise<ActionResult> {
   const { user, workspace } = await requireWorkspace();
   const invalid = validate(input);
   if (invalid) return { ok: false, error: invalid.error };
 
-  const item = await db.item.findFirst({
-    where: { id: input.itemId, workspaceId: workspace.id },
-  });
-  if (!item) return { ok: false, error: "Pick an item for this goal." };
+  const selected = await resolveGoalItems(workspace.id, input);
+  if (!selected.ok) return selected;
+  const item = selected.items[0];
 
   const plan = await getPlanForUser(user.id);
   if (!plan.isPro) {
@@ -69,8 +88,8 @@ export async function createGoal(input: GoalInput): Promise<ActionResult> {
   const goal = await db.goal.create({
     data: {
       workspaceId: workspace.id,
-      itemId: input.itemId,
-      name: input.name?.trim().slice(0, 80) || item.name,
+      itemId: item.id,
+      name: input.name?.trim().slice(0, 80) || selected.items.map((entry) => entry.name).join(" + "),
       targetSeconds,
       periodType: input.periodType,
       daysOfWeek: cleanDays(input.daysOfWeek),
@@ -78,6 +97,7 @@ export async function createGoal(input: GoalInput): Promise<ActionResult> {
       endDate,
       reminder: input.reminder ?? false,
       targetHistory: [{ from: startDate.toISOString(), targetSeconds }],
+      items: { create: selected.ids.map((itemId) => ({ itemId })) },
     },
   });
 
@@ -96,10 +116,9 @@ export async function updateGoal(input: GoalInput): Promise<ActionResult> {
   });
   if (!goal) return { ok: false, error: "Goal not found." };
 
-  const item = await db.item.findFirst({
-    where: { id: input.itemId, workspaceId: workspace.id },
-  });
-  if (!item) return { ok: false, error: "Pick a valid item." };
+  const selected = await resolveGoalItems(workspace.id, input);
+  if (!selected.ok) return selected;
+  const item = selected.items[0];
 
   const startDate = fromZonedTime(`${input.startDate} 00:00:00`, user.timezone);
   const endDate = input.endDate ? fromZonedTime(`${input.endDate} 00:00:00`, user.timezone) : null;
@@ -129,20 +148,24 @@ export async function updateGoal(input: GoalInput): Promise<ActionResult> {
 
   history.sort((a, b) => new Date(a.from).getTime() - new Date(b.from).getTime());
 
-  await db.goal.update({
-    where: { id: goal.id },
-    data: {
-      itemId: input.itemId,
-      name: input.name?.trim().slice(0, 80) || item.name,
-      targetSeconds,
-      periodType: input.periodType,
-      daysOfWeek: cleanDays(input.daysOfWeek),
-      startDate,
-      endDate,
-      reminder: input.reminder ?? goal.reminder,
-      targetHistory: history,
-    },
-  });
+  await db.$transaction([
+    db.goal.update({
+      where: { id: goal.id },
+      data: {
+        itemId: item.id,
+        name: input.name?.trim().slice(0, 80) || selected.items.map((entry) => entry.name).join(" + "),
+        targetSeconds,
+        periodType: input.periodType,
+        daysOfWeek: cleanDays(input.daysOfWeek),
+        startDate,
+        endDate,
+        reminder: input.reminder ?? goal.reminder,
+        targetHistory: history,
+      },
+    }),
+    db.goalItem.deleteMany({ where: { goalId: goal.id } }),
+    db.goalItem.createMany({ data: selected.ids.map((itemId) => ({ goalId: goal.id, itemId })) }),
+  ]);
 
   revalidateApp();
   return { ok: true, id: goal.id };

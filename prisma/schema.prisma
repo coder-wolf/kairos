@@ -116,6 +116,7 @@ model Item {
   parent       Item?          @relation("ItemHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
   children     Item[]         @relation("ItemHierarchy")
   goals        Goal[]
+  goalLinks    GoalItem[]
   timeSessions TimeSession[]
   timers       TimerState[]
 
@@ -155,8 +156,20 @@ model Goal {
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   item      Item      @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  items     GoalItem[]
 
   @@index([workspaceId, status])
+  @@index([itemId])
+}
+
+model GoalItem {
+  goalId String
+  itemId String
+
+  goal Goal @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  item Item @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@id([goalId, itemId])
   @@index([itemId])
 }
 

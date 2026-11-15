@@ -8,6 +8,7 @@ import { totalSeconds } from "@/lib/analytics";
 import { aggregateByItem, getSubtreeIds } from "@/lib/items";
 import { getSessionsWindow } from "@/lib/queries";
 import { getDateRange, overlapSeconds } from "@/lib/time";
+import { goalTouchesSubtree } from "@/lib/goals";
 import type { WorkspaceItem } from "@/lib/types";
 import { FREE_ITEM_LIMIT } from "@/lib/plan";
 import { formatDuration } from "@/lib/utils";
@@ -45,7 +46,7 @@ export default async function WorkspacePage() {
       archivedAt: item.archivedAt ? item.archivedAt.toISOString() : null,
       seconds: totals.get(item.id) ?? 0,
       directSeconds: direct.get(item.id) ?? 0,
-      goalCount: activeGoals.filter((goal) => subtree.has(goal.itemId)).length,
+      goalCount: activeGoals.filter((goal) => goalTouchesSubtree(goal, subtree)).length,
       childCount: visibleItems.filter((candidate) => candidate.parentId === item.id).length,
     };
   });

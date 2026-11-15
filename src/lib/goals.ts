@@ -13,7 +13,24 @@ import {
 } from "./time";
 import { getSubtreeIds } from "./items";
 
-export type GoalWithItem = Goal & { item: Item };
+export type GoalWithItem = Goal & { item: Item; items?: Array<{ itemId: string; item: Item }> };
+
+export function goalItemIds(goal: Pick<Goal, "itemId"> & { items?: Array<{ itemId: string }> }) {
+  const linked = goal.items?.map((entry) => entry.itemId).filter(Boolean) ?? [];
+  return linked.length > 0 ? Array.from(new Set(linked)) : [goal.itemId];
+}
+
+export function goalSubtreeIds(goal: GoalWithItem, items: Item[]) {
+  const subtree = new Set<string>();
+  for (const itemId of goalItemIds(goal)) {
+    for (const id of getSubtreeIds(items, itemId)) subtree.add(id);
+  }
+  return subtree;
+}
+
+export function goalTouchesSubtree(goal: Pick<Goal, "itemId"> & { items?: Array<{ itemId: string }> }, subtree: Set<string>) {
+  return goalItemIds(goal).some((itemId) => subtree.has(itemId));
+}
 
 type TargetRevision = { from: string; targetSeconds: number };
 
@@ -188,7 +205,7 @@ export function dailyTotalsForGoal(
   sessions: SessionInput[],
   timezone: string,
 ) {
-  const subtree = getSubtreeIds(items, goal.itemId);
+  const subtree = goalSubtreeIds(goal, items);
   const scheduled = new Set(goal.daysOfWeek);
   const totals = new Map<string, number>();
 
@@ -222,7 +239,7 @@ export function computeGoalProgress(
   now = new Date(),
 ): GoalProgress {
   const period = goalPeriod(goal, now, timezone, weekStartsOn);
-  const subtree = getSubtreeIds(items, goal.itemId);
+  const subtree = goalSubtreeIds(goal, items);
   const scheduled = new Set(goal.daysOfWeek);
 
   let actualSeconds = 0;
@@ -398,7 +415,7 @@ export function goalActualInRange(
   start: Date,
   end: Date,
 ) {
-  const subtree = getSubtreeIds(items, goal.itemId);
+  const subtree = goalSubtreeIds(goal, items);
   let total = 0;
   for (const session of sessions) {
     if (!subtree.has(session.itemId)) continue;
