@@ -43,7 +43,8 @@ export const metadata: Metadata = {
     description,
     images: [
       {
-        url: "/og.png",
+        url: "/og-kairos.png",
+        type: "image/png",
         width: 1200,
         height: 630,
         alt: "Kairos dashboard showing time tracked, goals, and projects",
@@ -54,7 +55,14 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Kairos — Time well spent",
     description,
-    images: ["/og.png"],
+    images: [
+      {
+        url: "/og-kairos.png",
+        width: 1200,
+        height: 630,
+        alt: "Kairos dashboard showing time tracked, goals, and projects",
+      },
+    ],
   },
 };
 
