@@ -164,7 +164,7 @@ export function PreferencesForm({ user }: { user: UserSummary }) {
       className="space-y-4"
     >
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Timezone" hint="All periods, dates, and streaks use this timezone.">
+        <Field label="Timezone" hint="Detected from your browser automatically. All periods, dates, and streaks use this timezone.">
           <Select value={timezone} onChange={(event) => setTimezone(event.target.value)}>
             {zones.map((zone) => (
               <option key={zone} value={zone}>

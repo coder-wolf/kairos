@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Building2, CreditCard, Crown, Database, Download, LogOut, Palette, ShieldCheck, UserRound, Clock3 } from "lucide-react";
 import { logout } from "@/app/actions/auth";
 import { PasswordForm, PreferencesForm, ProfileForm, WorkspaceForm } from "@/components/settings/settings-forms";
+import { SettingsTimezoneSync } from "@/components/settings/settings-timezone-sync";
 import { Button } from "@/components/ui/button";
 import { getAppContext, getCurrentUser } from "@/lib/dal";
 import { db } from "@/lib/db";
@@ -46,6 +47,7 @@ export default async function SettingsPage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
+      <SettingsTimezoneSync user={user} />
       <header>
         <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-2">Make it yours</p>
         <h1 className="mt-1.5 text-[30px] font-extrabold leading-tight tracking-[-0.04em] md:text-[38px]">
@@ -79,7 +81,7 @@ export default async function SettingsPage() {
             title="Preferences"
             description="Timezone and calendar boundaries affect every goal period and streak."
           >
-            <PreferencesForm user={user} />
+            <PreferencesForm key={`${user.timezone}-${user.weekStartsOn}-${user.theme}`} user={user} />
           </Section>
 
           <Section
