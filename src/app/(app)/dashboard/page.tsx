@@ -255,7 +255,7 @@ export default async function DashboardPage() {
       ) : (
         <>
           <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
-            <div className="min-w-0 xl:col-span-2">
+            <div className="hidden min-w-0 xl:col-span-2 xl:block">
           <div className="grid grid-cols-2 gap-3 md:gap-4 xl:grid-cols-4">
             <StatCard label="Today" value={formatDuration(todaySeconds, { zero: "0m" })} icon={<Clock3 className="h-4 w-4" />}>
               <Delta current={todaySeconds} previous={yesterdaySeconds} />
@@ -291,7 +291,7 @@ export default async function DashboardPage() {
           </div>
             </div>
 
-            <div className="min-w-0">
+            <div className="order-2 min-w-0 xl:order-none">
               <RhythmCard
                 weekTrend={weekTrend}
                 monthTrend={monthTrend}
@@ -304,7 +304,7 @@ export default async function DashboardPage() {
               />
             </div>
 
-            <div className="min-w-0">
+            <div className="order-1 min-w-0 xl:order-none">
               <section className="card overflow-hidden">
                 <div className="flex items-center justify-between border-b border-border px-5 py-4">
                   <div className="flex items-center gap-2">
@@ -318,7 +318,7 @@ export default async function DashboardPage() {
                 <DashboardAreas nodes={areaNodes} />
               </section>
             </div>
-            <div className="min-w-0">
+            <div className="order-4 min-w-0 xl:order-none">
               <section className="card overflow-hidden">
                 <div className="flex items-center justify-between border-b border-border px-4 py-3.5">
                   <div>
@@ -334,7 +334,7 @@ export default async function DashboardPage() {
                 <FocusGoals items={focusGoalItems} />
               </section>
             </div>
-            <div className="min-w-0">
+            <div className="order-5 min-w-0 xl:order-none">
               <section className="card overflow-hidden">
                 <div className="flex items-center justify-between border-b border-border px-4 py-3.5">
                   <div className="flex items-center gap-2">
@@ -348,7 +348,7 @@ export default async function DashboardPage() {
                 <HabitHistoryGrid entries={habitGoals} />
               </section>
             </div>
-            <div className="min-w-0">
+            <div className="order-6 min-w-0 xl:order-none">
               <section className="card overflow-hidden">
                 <div className="flex items-center justify-between border-b border-border px-5 py-4">
                   <h2 className="text-sm font-bold tracking-tight">Recent sessions</h2>
@@ -369,7 +369,7 @@ export default async function DashboardPage() {
                 />
               </section>
             </div>
-            <div className="min-w-0">
+            <div className="order-7 min-w-0 xl:order-none">
               <section className="card p-4">
                 <h2 className="text-sm font-bold tracking-tight">Quick actions</h2>
                 <div className="mt-3 grid grid-cols-2 gap-2">
