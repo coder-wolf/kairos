@@ -32,6 +32,14 @@ const axisStyle = {
   fontFamily: "var(--font-manrope)",
 };
 
+function formatAxisDuration(value: number) {
+  const seconds = Number(value);
+  if (!Number.isFinite(seconds) || seconds <= 0) return "0";
+  if (seconds < 3600) return `${Math.round(seconds / 60)}m`;
+  const hours = seconds / 3600;
+  return `${Number(hours.toFixed(hours >= 10 ? 0 : 1))}h`;
+}
+
 export function BarTrendChart({
   data,
   height = 220,
@@ -61,7 +69,7 @@ export function BarTrendChart({
               tickLine={false}
               axisLine={false}
               tick={axisStyle}
-              tickFormatter={(value) => `${Math.round(Number(value) / 3600)}h`}
+              tickFormatter={formatAxisDuration}
               width={46}
             />
           ) : null}
@@ -103,7 +111,7 @@ export function AreaTrendChart({
             tickLine={false}
             axisLine={false}
             tick={axisStyle}
-            tickFormatter={(value) => `${Math.round(Number(value) / 3600)}h`}
+            tickFormatter={formatAxisDuration}
             width={46}
           />
           <Tooltip
