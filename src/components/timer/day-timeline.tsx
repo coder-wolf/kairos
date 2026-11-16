@@ -73,10 +73,12 @@ export function DayTimeline({
   sessions,
   todayKey,
   timezone,
+  fill = false,
 }: {
   sessions: SessionRow[];
   todayKey: string;
   timezone: string;
+  fill?: boolean;
 }) {
   const { openManualTime } = useQuickActions();
   const router = useRouter();
@@ -265,7 +267,12 @@ export function DayTimeline({
   };
 
   return (
-    <section className="card relative overflow-hidden xl:sticky xl:top-24 xl:self-start">
+    <section
+      className={cn(
+        "card relative overflow-hidden",
+        fill ? "flex h-full min-h-0 flex-col" : "xl:sticky xl:top-24 xl:self-start",
+      )}
+    >
       <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary via-accent to-primary" />
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-gradient-to-b from-surface-2/50 to-surface px-5 py-4">
         <div>
@@ -295,7 +302,13 @@ export function DayTimeline({
         Drag empty space to add · drag a block to move · click to edit
       </div>
 
-      <div ref={scrollRef} className="scroll-thin max-h-[calc(100vh-300px)] min-h-[520px] overflow-y-auto">
+      <div
+        ref={scrollRef}
+        className={cn(
+          "scroll-thin overflow-y-auto",
+          fill ? "min-h-0 flex-1" : "max-h-[calc(100vh-300px)] min-h-[520px]",
+        )}
+      >
         <div className="flex">
           <div className="relative shrink-0 border-r border-border bg-surface/80" style={{ width: GUTTER_WIDTH, height: TOTAL_HEIGHT }}>
             {Array.from({ length: 24 }).map((_, hour) => (

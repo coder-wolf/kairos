@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Timer as TimerIcon } from "lucide-react";
 import { DayTimeline } from "@/components/timer/day-timeline";
+import { TimerTabs } from "@/components/timer/timer-tabs";
 import { TimerStudio } from "@/components/timer/timer-studio";
 import { totalSeconds } from "@/lib/analytics";
 import { getAppContext, toItemOptions, toSessionRows } from "@/lib/dal";
@@ -27,8 +28,8 @@ export default async function TimerPage({
   const itemOptions = toItemOptions(items);
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+    <div className="flex h-[calc(100dvh-7rem)] flex-col gap-3 animate-fade-in md:h-[calc(100dvh-8rem)] lg:h-[calc(100dvh-9rem)] xl:h-auto xl:space-y-6">
+      <header className="hidden xl:flex xl:flex-col xl:gap-4 md:flex-row md:items-end md:justify-between">
         <div>
           <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-2">One clock at a time</p>
           <h1 className="mt-1.5 flex items-center gap-3 text-[30px] font-extrabold leading-tight tracking-[-0.04em] md:text-[38px]">
@@ -55,10 +56,10 @@ export default async function TimerPage({
         </div>
       </header>
 
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(380px,0.9fr)]">
-        <TimerStudio items={itemOptions} initialMode={initialMode} />
-        <DayTimeline sessions={rows} todayKey={todayKey} timezone={user.timezone} />
-      </div>
+      <TimerTabs
+        timer={<TimerStudio items={itemOptions} initialMode={initialMode} />}
+        calendar={<DayTimeline sessions={rows} todayKey={todayKey} timezone={user.timezone} fill />}
+      />
     </div>
   );
 }
