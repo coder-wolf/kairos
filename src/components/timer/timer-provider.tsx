@@ -24,7 +24,7 @@ type TimerContextValue = {
   timer: TimerSnapshot | null;
   elapsed: number;
   pending: boolean;
-  start: (itemId?: string | null) => void;
+  start: (itemId?: string | null, description?: string) => void;
   pause: () => void;
   resume: () => void;
   stop: () => void;
@@ -97,9 +97,9 @@ export function TimerProvider({
   }, [timer, now]);
 
   const start = React.useCallback(
-    (itemId?: string | null) => {
+    (itemId?: string | null, description?: string) => {
       startTransition(async () => {
-        const result = await startTimer(itemId ?? null);
+        const result = await startTimer(itemId ?? null, description ? { description } : undefined);
         if (!result.ok) {
           toast.error(result.error);
           return;

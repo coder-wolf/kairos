@@ -1,6 +1,8 @@
 import type { ItemType, PeriodType, SessionSource } from "@prisma/client";
 import type { TimerSnapshot } from "./types";
 
+export const UNASSIGNED_ITEM_ID = "__unassigned__";
+
 export type ActionResult = { ok: true; id?: string; message?: string } | { ok: false; error: string };
 
 export type TimerActionResult =

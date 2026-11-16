@@ -117,7 +117,7 @@ export function SessionTable({
                     </td>
                   ) : null}
                   <td className={compact ? "whitespace-nowrap px-3 py-2 text-right font-semibold tabular-nums" : "whitespace-nowrap px-3 py-2.5 text-right font-semibold tabular-nums"}>
-                    {formatDuration(session.durationSeconds)}
+                    {formatDuration(session.durationSeconds, { showSeconds: true })}
                   </td>
                   <td className="px-2 py-2 text-right">
                     <DropdownMenu>
@@ -154,7 +154,7 @@ export function SessionTable({
         title="Delete this time entry?"
         description={
           toDelete
-            ? `${formatDuration(toDelete.durationSeconds)} on ${toDelete.itemName} will be removed. Parent totals and goals will update immediately.`
+            ? `${formatDuration(toDelete.durationSeconds, { showSeconds: true })} on ${toDelete.itemName} will be removed. Parent totals and goals will update immediately.`
             : ""
         }
         confirmLabel="Delete entry"

@@ -53,15 +53,26 @@ export function colorForItem(item: { id: string; color?: string | null }, index 
   return item.color ?? ITEM_PALETTE[index % ITEM_PALETTE.length];
 }
 
-export function formatDuration(totalSeconds: number, options?: { compact?: boolean; zero?: string }) {
+export function formatDuration(
+  totalSeconds: number,
+  options?: { compact?: boolean; zero?: string; showSeconds?: boolean },
+) {
   const seconds = Math.max(0, Math.round(totalSeconds));
   if (seconds === 0) return options?.zero ?? (options?.compact ? "0h" : "0m");
 
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
-  // Show seconds only for short, live counters.
   const secs = seconds % 60;
 
+  if (options?.showSeconds) {
+    const parts: string[] = [];
+    if (hours > 0) parts.push(`${hours}h`);
+    if (minutes > 0) parts.push(`${minutes}m`);
+    if (secs > 0 || parts.length === 0) parts.push(`${secs}s`);
+    return parts.join(" ");
+  }
+
+  // Aggregate totals stay calm; individual entries can request seconds.
   if (hours > 0) {
     if (minutes === 0) return `${hours}h`;
     return `${hours}h ${minutes}m`;

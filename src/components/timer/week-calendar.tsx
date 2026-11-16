@@ -2,7 +2,11 @@
 
 import * as React from "react";
 import { formatInTimeZone } from "date-fns-tz";
-import { LocateFixed } from "lucide-react";
+import { ChevronLeft, ChevronRight, Clock3, Globe2, Layers, LocateFixed } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { updateSession } from "@/app/actions/sessions";
+import Link from "next/link";
 import { useQuickActions } from "@/components/quick-actions";
 import { endOfDayKey, startOfDayKey } from "@/lib/time";
 import type { SessionRow } from "@/lib/types";
@@ -79,14 +83,58 @@ export function WeekCalendar({
   sessions,
   days,
   timezone,
+  weekLabel,
+  weekOfLabel,
+  prevHref,
+  nextHref,
+  todayHref,
+  isCurrentWeek,
+  weekTotal,
+  sessionCount,
+  timezoneLabel,
 }: {
   sessions: SessionRow[];
   days: CalendarDay[];
   timezone: string;
+  weekLabel: string;
+  weekOfLabel: string;
+  prevHref: string;
+  nextHref: string;
+  todayHref: string;
+  isCurrentWeek: boolean;
+  weekTotal: number;
+  sessionCount: number;
+  timezoneLabel: string;
 }) {
   const { openManualTime } = useQuickActions();
+  const router = useRouter();
   const scrollRef = React.useRef<HTMLDivElement>(null);
   const [now, setNow] = React.useState(() => Date.now());
+  const [selection, setSelection] = React.useState<{ dayKey: string; startMin: number; endMin: number } | null>(null);
+  const selectionDrag = React.useRef<{
+    dayKey: string;
+    anchorMin: number;
+    moved: boolean;
+    element: HTMLDivElement;
+  } | null>(null);
+  const [dragPreview, setDragPreview] = React.useState<{
+    dayKey: string;
+    startMin: number;
+    endMin: number;
+    sessionId: string;
+  } | null>(null);
+  const sessionDrag = React.useRef<{
+    session: SessionRow;
+    dayKey: string;
+    durationMin: number;
+    offsetMin: number;
+    startX: number;
+    startY: number;
+    moved: boolean;
+    element: HTMLButtonElement;
+    preview: { dayKey: string; startMin: number } | null;
+  } | null>(null);
+  const suppressClick = React.useRef<string | null>(null);
 
   React.useEffect(() => {
     const id = window.setInterval(() => setNow(Date.now()), 60_000);
@@ -146,32 +194,188 @@ export function WeekCalendar({
   }, [byDay]);
 
   const today = days.find((day) => day.isToday);
-  const total = sessions.reduce((acc, session) => acc + session.durationSeconds, 0);
-
-  const addTimeAt = (dayKey: string, clientY: number, element: HTMLElement) => {
+  const snapMinutes = (clientY: number, element: HTMLElement) => {
     const rect = element.getBoundingClientRect();
     const rawMinutes = ((clientY - rect.top) / ROW_HEIGHT) * 60;
-    const minutes = Math.max(0, Math.min(23 * 60 + 45, Math.round(rawMinutes / 15) * 15));
-    const hour = Math.floor(minutes / 60);
-    const minute = minutes % 60;
+    return Math.max(0, Math.min(23 * 60 + 45, Math.round(rawMinutes / 15) * 15));
+  };
+
+  const timeLabel = (minutes: number) =>
+    `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
+
+  const beginSelection = (dayKey: string, event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.button !== 0) return;
+    const target = event.target as HTMLElement;
+    if (target.closest("button, a")) return;
+    const element = event.currentTarget;
+    const anchorMin = snapMinutes(event.clientY, element);
+    selectionDrag.current = { dayKey, anchorMin, moved: false, element };
+    setSelection({ dayKey, startMin: anchorMin, endMin: Math.min(1440, anchorMin + 15) });
+    element.setPointerCapture(event.pointerId);
+    event.preventDefault();
+  };
+
+  const updateSelection = (event: React.PointerEvent<HTMLDivElement>) => {
+    const drag = selectionDrag.current;
+    if (!drag) return;
+    const currentMin = snapMinutes(event.clientY, drag.element);
+    if (currentMin !== drag.anchorMin) drag.moved = true;
+    const startMin = Math.min(drag.anchorMin, currentMin);
+    const endMin = Math.max(drag.anchorMin, currentMin) + 15;
+    setSelection({ dayKey: drag.dayKey, startMin, endMin: Math.min(1440, endMin) });
+  };
+
+  const finishSelection = (event: React.PointerEvent<HTMLDivElement>) => {
+    const drag = selectionDrag.current;
+    if (!drag) return;
+    const currentMin = snapMinutes(event.clientY, drag.element);
+    const startMin = Math.min(drag.anchorMin, currentMin);
+    const endMin = Math.min(1440, drag.moved ? Math.max(drag.anchorMin, currentMin) + 15 : startMin + 30);
+    selectionDrag.current = null;
+    setSelection(null);
+    if (drag.element.hasPointerCapture(event.pointerId)) {
+      drag.element.releasePointerCapture(event.pointerId);
+    }
     openManualTime({
-      date: dayKey,
-      startTime: `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`,
+      date: drag.dayKey,
+      startTime: timeLabel(startMin),
+      durationMinutes: Math.max(15, endMin - startMin),
     });
   };
 
+  const cancelSelection = () => {
+    selectionDrag.current = null;
+    setSelection(null);
+  };
+
+  const targetDayElement = (clientX: number, clientY: number, fallback: string) => {
+    const under = document.elementFromPoint(clientX, clientY);
+    return (under?.closest("[data-day-key]") as HTMLElement | null) ?? document.querySelector<HTMLElement>(`[data-day-key="${fallback}"]`);
+  };
+
+  const startSessionDrag = (event: React.PointerEvent<HTMLButtonElement>, session: SessionRow, segment: Segment, dayKey: string) => {
+    if (event.button !== 0) return;
+    event.stopPropagation();
+    event.preventDefault();
+    const element = event.currentTarget;
+    const dayElement = element.closest("[data-day-key]") as HTMLElement | null;
+    if (!dayElement) return;
+    const durationMin = Math.max(1, Math.round(segment.endMin - segment.startMin));
+    const offsetMin = Math.max(
+      0,
+      Math.min(durationMin, snapMinutes(event.clientY, dayElement) - Math.round(segment.startMin)),
+    );
+    sessionDrag.current = {
+      session,
+      dayKey,
+      durationMin,
+      offsetMin,
+      startX: event.clientX,
+      startY: event.clientY,
+      moved: false,
+      element,
+      preview: null,
+    };
+    element.setPointerCapture(event.pointerId);
+  };
+
+  const moveSessionDrag = (event: React.PointerEvent<HTMLButtonElement>) => {
+    const drag = sessionDrag.current;
+    if (!drag) return;
+    if (!drag.moved && Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY) < 4) return;
+    drag.moved = true;
+    const dayElement = targetDayElement(event.clientX, event.clientY, drag.dayKey);
+    if (!dayElement) return;
+    const dayKey = dayElement.dataset.dayKey ?? drag.dayKey;
+    const minute = snapMinutes(event.clientY, dayElement);
+    const startMin = Math.max(0, Math.min(1440 - drag.durationMin, minute - drag.offsetMin));
+    drag.preview = { dayKey, startMin };
+    setDragPreview({
+      dayKey,
+      startMin,
+      endMin: startMin + drag.durationMin,
+      sessionId: drag.session.id,
+    });
+  };
+
+  const endSessionDrag = async (event: React.PointerEvent<HTMLButtonElement>) => {
+    const drag = sessionDrag.current;
+    if (!drag) return;
+    sessionDrag.current = null;
+    if (drag.element.hasPointerCapture(event.pointerId)) drag.element.releasePointerCapture(event.pointerId);
+    const preview = drag.preview;
+    setDragPreview(null);
+    if (!drag.moved) {
+      openManualTime({ itemId: drag.session.itemId, session: drag.session });
+      return;
+    }
+    suppressClick.current = drag.session.id;
+    window.setTimeout(() => {
+      if (suppressClick.current === drag.session.id) suppressClick.current = null;
+    }, 600);
+    if (!preview) return;
+    const result = await updateSession({
+      id: drag.session.id,
+      itemId: drag.session.itemId,
+      date: preview.dayKey,
+      startTime: timeLabel(preview.startMin),
+      durationMinutes: drag.durationMin,
+      description: drag.session.description ?? undefined,
+    });
+    if (!result.ok) {
+      toast.error(result.error);
+      return;
+    }
+    router.refresh();
+  };
+
   return (
-    <section className="card overflow-hidden">
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-gradient-to-b from-surface-2/50 to-surface px-5 py-4">
-        <div>
-          <h2 className="text-sm font-bold tracking-tight">Weekly time blocking</h2>
-          <p className="text-[11px] text-muted">
-            {sessions.length} {sessions.length === 1 ? "entry" : "entries"} · {formatDuration(total)} tracked
-          </p>
+    <section className="card flex h-full min-h-0 flex-col overflow-hidden">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-gradient-to-b from-surface-2/50 to-surface px-3 py-2.5">
+        <div className="flex items-center gap-1.5">
+          <Link
+            href={prevHref}
+            className="grid h-8 w-8 place-items-center rounded-full border border-border bg-surface text-muted transition-colors hover:border-primary/30 hover:bg-primary-soft hover:text-primary"
+            aria-label="Previous week"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Link>
+          <div className="min-w-[170px] px-1 text-center">
+            <p className="text-[14px] font-extrabold tracking-[-0.02em]">{weekLabel}</p>
+            <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-muted-2">{weekOfLabel}</p>
+          </div>
+          <Link
+            href={nextHref}
+            className="grid h-8 w-8 place-items-center rounded-full border border-border bg-surface text-muted transition-colors hover:border-primary/30 hover:bg-primary-soft hover:text-primary"
+            aria-label="Next week"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Link>
+          <Link
+            href={todayHref}
+            className={cn(
+              "ml-1 inline-flex h-8 items-center rounded-full border px-3 text-[10px] font-bold transition-colors",
+              isCurrentWeek
+                ? "border-transparent bg-primary-soft text-primary"
+                : "border-border bg-surface text-muted hover:bg-surface-2 hover:text-text",
+            )}
+          >
+            Today
+          </Link>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="hidden items-center gap-1.5 rounded-full border border-border bg-surface px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.12em] text-muted-2 sm:inline-flex">
-            <span className="h-1.5 w-1.5 rounded-full bg-primary" /> Click a slot to add · click a block to edit
+
+        <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-muted">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-2.5 py-1">
+            <Clock3 className="h-3 w-3 text-primary" />
+            <strong className="font-semibold text-text">{formatDuration(weekTotal, { zero: "0m" })}</strong> tracked
+          </span>
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-2.5 py-1">
+            <Layers className="h-3 w-3 text-primary" />
+            <strong className="font-semibold text-text">{sessionCount}</strong> sessions
+          </span>
+          <span className="hidden items-center gap-1.5 rounded-full border border-border bg-surface px-2.5 py-1 sm:inline-flex" title={timezone}>
+            <Globe2 className="h-3 w-3 text-primary" />
+            <strong className="font-semibold text-text">{timezoneLabel}</strong>
           </span>
           <button
             type="button"
@@ -187,10 +391,14 @@ export function WeekCalendar({
           </button>
         </div>
       </div>
+      <div className="flex items-center justify-between border-b border-border px-4 py-1.5 text-[9px] font-medium text-muted-2">
+        <span className="font-bold uppercase tracking-[0.12em]">Weekly time blocking</span>
+        <span>Drag empty space to add · drag a block to move · click to edit</span>
+      </div>
 
-      <div className="scroll-thin overflow-x-auto">
+      <div className="scroll-thin min-h-0 flex-1 overflow-x-auto">
         <div className="min-w-[760px]">
-          <div ref={scrollRef} className="scroll-thin max-h-[calc(100vh-300px)] min-h-[480px] overflow-y-auto">
+          <div ref={scrollRef} className="scroll-thin h-full overflow-y-auto">
             <div className="sticky top-0 z-30 flex border-b border-border bg-surface/95 backdrop-blur">
               <div className="shrink-0" style={{ width: GUTTER_WIDTH }} />
               {days.map((day) => (
@@ -236,7 +444,11 @@ export function WeekCalendar({
                 {days.map((day) => (
                   <div
                     key={day.key}
-                    onClick={(event) => addTimeAt(day.key, event.clientY, event.currentTarget)}
+                    data-day-key={day.key}
+                    onPointerDown={(event) => beginSelection(day.key, event)}
+                    onPointerMove={updateSelection}
+                    onPointerUp={finishSelection}
+                    onPointerCancel={cancelSelection}
                     className={cn(
                       "relative cursor-crosshair border-l border-border/60 transition-colors hover:bg-primary-soft/10",
                       day.isWeekend && "bg-surface-2/25",
@@ -248,6 +460,31 @@ export function WeekCalendar({
                         "repeating-linear-gradient(to bottom, color-mix(in srgb, var(--border) 85%, transparent) 0 1px, transparent 1px 56px), repeating-linear-gradient(to bottom, transparent 0 27px, color-mix(in srgb, var(--border) 28%, transparent) 27px 28px, transparent 28px 56px)",
                     }}
                   >
+                    {dragPreview?.dayKey === day.key ? (
+                      <div
+                        className="pointer-events-none absolute left-1 right-1 z-30 rounded-md border border-primary bg-primary/20 px-1.5 py-1 text-[9px] font-bold text-primary shadow-sm"
+                        style={{
+                          top: (dragPreview.startMin / 60) * ROW_HEIGHT,
+                          height: Math.max(22, ((dragPreview.endMin - dragPreview.startMin) / 60) * ROW_HEIGHT),
+                        }}
+                      >
+                        {timeLabel(dragPreview.startMin)} – {timeLabel(dragPreview.endMin)}
+                      </div>
+                    ) : null}
+
+                    {selection?.dayKey === day.key ? (
+                      <div
+                        className="pointer-events-none absolute left-1 right-1 z-[5] rounded-md border border-primary/60 bg-primary/15 px-1.5 py-1 text-[9px] font-bold text-primary"
+                        style={{
+                          top: (selection.startMin / 60) * ROW_HEIGHT,
+                          height: Math.max(18, ((selection.endMin - selection.startMin) / 60) * ROW_HEIGHT),
+                        }}
+                      >
+                        {timeLabel(selection.startMin)} – {timeLabel(selection.endMin)} ·{" "}
+                        {formatDuration((selection.endMin - selection.startMin) * 60)}
+                      </div>
+                    ) : null}
+
                     {(byDay.get(day.key) ?? []).map((segment) => {
                       const top = (segment.startMin / 60) * ROW_HEIGHT;
                       const height = Math.max(22, ((segment.endMin - segment.startMin) / 60) * ROW_HEIGHT);
@@ -261,9 +498,23 @@ export function WeekCalendar({
                           type="button"
                           onClick={(event) => {
                             event.stopPropagation();
+                            if (suppressClick.current === segment.session.id) {
+                              suppressClick.current = null;
+                              return;
+                            }
                             openManualTime({ itemId: segment.session.itemId, session: segment.session });
                           }}
-                          className="absolute z-10 overflow-hidden rounded-lg px-1.5 py-1 text-left transition-all duration-150 hover:z-20 hover:-translate-y-px hover:shadow-[0_5px_16px_-6px_rgba(15,15,25,0.35)]"
+                          onPointerDown={(event) => startSessionDrag(event, segment.session, segment, day.key)}
+                          onPointerMove={moveSessionDrag}
+                          onPointerUp={endSessionDrag}
+                          onPointerCancel={() => {
+                            sessionDrag.current = null;
+                            setDragPreview(null);
+                          }}
+                          className={cn(
+                            "absolute z-10 cursor-grab touch-none overflow-hidden rounded-lg px-1.5 py-1 text-left transition-all duration-150 hover:z-20 hover:-translate-y-px hover:shadow-[0_5px_16px_-6px_rgba(15,15,25,0.35)] active:cursor-grabbing",
+                            dragPreview?.sessionId === segment.session.id && "opacity-40",
+                          )}
                           style={{
                             top,
                             height,
@@ -274,10 +525,10 @@ export function WeekCalendar({
                             borderLeft: `3px solid ${color}`,
                             boxShadow: "0 1px 2px rgba(15,15,25,0.05)",
                           }}
-                          title={`${segment.session.itemName}${segment.session.description ? ` · ${segment.session.description}` : ""}\n${formatInTimeZone(segment.start, timezone, "h:mm a")} – ${formatInTimeZone(segment.end, timezone, "h:mm a")}`}
+                          title={`${segment.session.itemName}${segment.session.description ? ` · ${segment.session.description}` : ""}\n${formatInTimeZone(segment.start, timezone, "h:mm a")} – ${formatInTimeZone(segment.end, timezone, "h:mm a")} · ${formatDuration(segment.session.durationSeconds, { showSeconds: true })}`}
                         >
                           <span
-                            className="block truncate text-[10px] font-bold leading-tight"
+                            className="block truncate text-[11px] font-bold leading-tight"
                             style={{ color: `color-mix(in srgb, ${color} 72%, var(--text))` }}
                           >
                             {segment.session.itemName}

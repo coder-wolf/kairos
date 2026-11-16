@@ -6,6 +6,7 @@ import { formatInTimeZone } from "date-fns-tz";
 import { Clock, NotebookPen, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { createSession, deleteSession, updateSession } from "@/app/actions/sessions";
+import { UNASSIGNED_ITEM_ID } from "@/lib/action-types";
 import { ConfirmDialog } from "@/components/dialogs/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -22,6 +23,7 @@ type ManualTimeDialogProps = {
   defaultItemId?: string;
   defaultDate?: string;
   defaultStartTime?: string;
+  defaultDurationMinutes?: number;
   timezone: string;
   todayKey: string;
 };
@@ -30,7 +32,7 @@ export function ManualTimeDialog(props: ManualTimeDialogProps) {
   if (!props.open) return null;
   return (
     <ManualTimeDialogBody
-      key={`${props.initial?.id ?? "new"}-${props.defaultItemId ?? ""}-${props.defaultDate ?? ""}-${props.defaultStartTime ?? ""}`}
+      key={`${props.initial?.id ?? "new"}-${props.defaultItemId ?? ""}-${props.defaultDate ?? ""}-${props.defaultStartTime ?? ""}-${props.defaultDurationMinutes ?? ""}`}
       {...props}
     />
   );
@@ -43,27 +45,35 @@ function ManualTimeDialogBody({
   defaultItemId,
   defaultDate,
   defaultStartTime,
+  defaultDurationMinutes,
   timezone,
   todayKey,
 }: ManualTimeDialogProps) {
   const router = useRouter();
   const [pending, startTransition] = React.useTransition();
-  const initialTotal = initial ? initial.durationSeconds / 60 : 30;
-  const [itemId, setItemId] = React.useState(initial?.itemId ?? defaultItemId ?? "");
+  const initialSeconds = initial ? initial.durationSeconds : Math.round((defaultDurationMinutes ?? 30) * 60);
+  const systemItemId = items.find((item) => item.isSystem)?.id;
+  const initialItemId = initial
+    ? initial.itemId === systemItemId
+      ? UNASSIGNED_ITEM_ID
+      : initial.itemId
+    : defaultItemId ?? "";
+  const [itemId, setItemId] = React.useState(initialItemId);
   const [date, setDate] = React.useState(
     initial ? formatInTimeZone(new Date(initial.startTime), timezone, "yyyy-MM-dd") : defaultDate ?? todayKey,
   );
   const [startTime, setStartTime] = React.useState(
     initial ? formatInTimeZone(new Date(initial.startTime), timezone, "HH:mm") : defaultStartTime ?? "",
   );
-  const [hours, setHours] = React.useState(String(Math.floor(initialTotal / 60)));
-  const [minutes, setMinutes] = React.useState(String(Math.round(initialTotal % 60)));
+  const [hours, setHours] = React.useState(String(Math.floor(initialSeconds / 3600)));
+  const [minutes, setMinutes] = React.useState(String(Math.floor((initialSeconds % 3600) / 60)));
+  const [seconds, setSeconds] = React.useState(String(initialSeconds % 60));
   const [description, setDescription] = React.useState(initial?.description ?? "");
   const [error, setError] = React.useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = React.useState(false);
 
   const itemOptions = flattenItemOptions(items);
-  const totalMinutes = Math.max(0, Math.round(Number(hours || 0) * 60 + Number(minutes || 0)));
+  const totalSeconds = Math.max(0, Math.round(Number(hours || 0) * 3600 + Number(minutes || 0) * 60 + Number(seconds || 0)));
 
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
@@ -74,7 +84,7 @@ function ManualTimeDialogBody({
         itemId,
         date,
         startTime: startTime || undefined,
-        durationMinutes: totalMinutes,
+        durationMinutes: totalSeconds / 60,
         description,
       };
       const result = initial ? await updateSession(payload) : await createSession(payload);
@@ -82,7 +92,7 @@ function ManualTimeDialogBody({
         setError(result.error);
         return;
       }
-      toast.success(initial ? "Time entry updated" : `Added ${formatDuration(totalMinutes * 60)}`);
+      toast.success(initial ? "Time entry updated" : `Added ${formatDuration(totalSeconds, { showSeconds: true })}`);
       onOpenChange(false);
       router.refresh();
     });
@@ -105,6 +115,7 @@ function ManualTimeDialogBody({
               <option value="" disabled>
                 Choose an item
               </option>
+              <option value={UNASSIGNED_ITEM_ID}>Unassigned</option>
               {itemOptions.map((option) => (
                 <option key={option.id} value={option.id}>
                   {"— ".repeat(option.depth)}
@@ -153,7 +164,20 @@ function ManualTimeDialogBody({
                 />
                 <span className="text-sm font-semibold text-muted">m</span>
               </div>
-              <span className="ml-auto text-sm font-bold">{formatDuration(totalMinutes * 60)}</span>
+              <div className="flex items-center gap-1.5">
+                <Input
+                  type="number"
+                  min="0"
+                  max="59"
+                  step="1"
+                  value={seconds}
+                  onChange={(event) => setSeconds(event.target.value)}
+                  className="w-20"
+                  aria-label="Seconds"
+                />
+                <span className="text-sm font-semibold text-muted">s</span>
+              </div>
+              <span className="ml-auto text-sm font-bold">{formatDuration(totalSeconds, { showSeconds: true })}</span>
             </div>
           </div>
 
@@ -193,7 +217,7 @@ function ManualTimeDialogBody({
               <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
-              <Button type="submit" loading={pending} disabled={!itemId || totalMinutes < 1}>
+              <Button type="submit" loading={pending} disabled={!itemId || totalSeconds < 1}>
                 {initial ? "Save changes" : "Add time"}
               </Button>
             </div>
@@ -206,7 +230,7 @@ function ManualTimeDialogBody({
           open={confirmDelete}
           onOpenChange={setConfirmDelete}
           title="Delete this time entry?"
-          description={`${formatDuration(initial.durationSeconds)} on ${initial.itemName} will be removed. Parent totals and goals will update immediately.`}
+          description={`${formatDuration(initial.durationSeconds, { showSeconds: true })} on ${initial.itemName} will be removed. Parent totals and goals will update immediately.`}
           confirmLabel="Delete entry"
           destructive
           onConfirm={async () => {

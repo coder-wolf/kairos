@@ -78,14 +78,14 @@ export function SessionList({
         </p>
       </div>
       <div className="hidden text-right sm:block">
-        <p className="text-[12px] font-semibold tabular-nums">{formatDuration(session.durationSeconds)}</p>
+        <p className="text-[12px] font-semibold tabular-nums">{formatDuration(session.durationSeconds, { showSeconds: true })}</p>
         <p className="text-[10px] uppercase tracking-wide text-muted-2">
           {formatInTimeZone(new Date(session.startTime), timezone, "h:mm a")} –{" "}
           {formatInTimeZone(new Date(session.endTime), timezone, "h:mm a")}
         </p>
       </div>
       <div className="text-right sm:hidden">
-        <p className="text-[12px] font-semibold tabular-nums">{formatDuration(session.durationSeconds)}</p>
+        <p className="text-[12px] font-semibold tabular-nums">{formatDuration(session.durationSeconds, { showSeconds: true })}</p>
       </div>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
@@ -129,7 +129,7 @@ export function SessionList({
                   <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-muted">
                     {dayLabel(key, timezone)}
                   </p>
-                  <p className={cn("text-[11px] font-semibold tabular-nums text-muted-2")}>{formatDuration(total)}</p>
+                  <p className={cn("text-[11px] font-semibold tabular-nums text-muted-2")}>{formatDuration(total, { showSeconds: true })}</p>
                 </div>
                 <div className="overflow-hidden rounded-2xl border border-border bg-surface">
                   <div className="divide-y divide-border">{daySessions.map(renderRow)}</div>
@@ -148,7 +148,7 @@ export function SessionList({
         title="Delete this time entry?"
         description={
           toDelete
-            ? `${formatDuration(toDelete.durationSeconds)} on ${toDelete.itemName} will be removed. Parent totals and goals will update immediately.`
+            ? `${formatDuration(toDelete.durationSeconds, { showSeconds: true })} on ${toDelete.itemName} will be removed. Parent totals and goals will update immediately.`
             : ""
         }
         confirmLabel="Delete entry"

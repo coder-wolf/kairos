@@ -4,6 +4,7 @@ import { fromZonedTime } from "date-fns-tz";
 import type { ActionResult, SessionInput } from "@/lib/action-types";
 import { requireWorkspace, revalidateApp } from "@/lib/authz";
 import { db } from "@/lib/db";
+import { UNASSIGNED_ITEM_ID } from "@/lib/action-types";
 import { ensureUnassignedItem } from "@/lib/system-items";
 import { getPlanForUser } from "@/lib/billing";
 
@@ -16,11 +17,11 @@ function parseSessionTimes(input: SessionInput, timezone: string) {
   if (!DATE_PATTERN.test(input.date)) {
     throw new SessionInputError("Choose a valid date.");
   }
-  const minutes = Math.round(Number(input.durationMinutes));
-  if (!Number.isFinite(minutes) || minutes < 1) {
-    throw new SessionInputError("Duration must be at least 1 minute.");
+  const durationSeconds = Math.round(Number(input.durationMinutes) * 60);
+  if (!Number.isFinite(durationSeconds) || durationSeconds < 1) {
+    throw new SessionInputError("Duration must be at least 1 second.");
   }
-  if (minutes > 24 * 60) {
+  if (durationSeconds > 24 * 60 * 60) {
     throw new SessionInputError("A single entry can't be longer than 24 hours.");
   }
 
@@ -31,17 +32,20 @@ function parseSessionTimes(input: SessionInput, timezone: string) {
   }
 
   const startTime = fromZonedTime(`${input.date} ${time}:00`, timezone);
-  const endTime = new Date(startTime.getTime() + minutes * 60_000);
+  const endTime = new Date(startTime.getTime() + durationSeconds * 1000);
 
-  return { startTime, endTime, durationSeconds: minutes * 60 };
+  return { startTime, endTime, durationSeconds };
 }
 
 export async function createSession(input: SessionInput): Promise<ActionResult> {
   const { user, workspace } = await requireWorkspace();
 
-  const item = await db.item.findFirst({
-    where: { id: input.itemId, workspaceId: workspace.id },
-  });
+  const item =
+    input.itemId === UNASSIGNED_ITEM_ID
+      ? await ensureUnassignedItem(workspace.id)
+      : await db.item.findFirst({
+          where: { id: input.itemId, workspaceId: workspace.id },
+        });
   if (!item) return { ok: false, error: "Pick an item to track time against." };
 
   try {
@@ -50,7 +54,7 @@ export async function createSession(input: SessionInput): Promise<ActionResult> 
       data: {
         userId: user.id,
         workspaceId: workspace.id,
-        itemId: input.itemId,
+        itemId: item.id,
         startTime: times.startTime,
         endTime: times.endTime,
         durationSeconds: times.durationSeconds,
@@ -75,9 +79,12 @@ export async function updateSession(input: SessionInput): Promise<ActionResult> 
   });
   if (!existing) return { ok: false, error: "Entry not found." };
 
-  const item = await db.item.findFirst({
-    where: { id: input.itemId, workspaceId: workspace.id },
-  });
+  const item =
+    input.itemId === UNASSIGNED_ITEM_ID
+      ? await ensureUnassignedItem(workspace.id)
+      : await db.item.findFirst({
+          where: { id: input.itemId, workspaceId: workspace.id },
+        });
   if (!item) return { ok: false, error: "Pick a valid item." };
 
   try {
@@ -85,7 +92,7 @@ export async function updateSession(input: SessionInput): Promise<ActionResult> 
     await db.timeSession.update({
       where: { id: existing.id },
       data: {
-        itemId: input.itemId,
+        itemId: item.id,
         startTime: times.startTime,
         endTime: times.endTime,
         durationSeconds: times.durationSeconds,

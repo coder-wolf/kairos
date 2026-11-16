@@ -625,7 +625,7 @@ export function PomodoroFloating({ items }: { items: ItemOption[] }) {
                 <span>
                   Today · {completed} rounds · {formatDuration(focusSeconds, { zero: "0m" })} focused
                 </span>
-                <Link href="/pomodoro" className="inline-flex items-center gap-1 font-semibold hover:text-primary">
+                <Link href="/timer?mode=pomodoro" className="inline-flex items-center gap-1 font-semibold hover:text-primary">
                   Full view <ArrowUpRight className="h-3 w-3" />
                 </Link>
               </div>

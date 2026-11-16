@@ -30,6 +30,7 @@ export type PomodoroRun = {
   phaseStartedAt: number | null;
   phaseId: string | null;
   itemId: string | null;
+  description: string;
 };
 
 export const DEFAULT_POMODORO_SETTINGS: PomodoroSettings = {
@@ -55,6 +56,7 @@ const IDLE_RUN: PomodoroRun = {
   phaseStartedAt: null,
   phaseId: null,
   itemId: null,
+  description: "",
 };
 
 type PomodoroContextValue = {
@@ -67,12 +69,14 @@ type PomodoroContextValue = {
   completed: number;
   focusSeconds: number;
   itemId: string | null;
+  description: string;
   active: boolean;
   isPro: boolean;
   windowOpen: boolean;
   openWindow: () => void;
   closeWindow: () => void;
   setItemId: (id: string | null) => void;
+  setDescription: (description: string) => void;
   updateSettings: (next: Partial<PomodoroSettings>) => void;
   setCustomMinutes: (minutes: number) => void;
   start: () => void;
@@ -252,7 +256,7 @@ export function PomodoroProvider({
           itemId: current.itemId,
           startTime: start,
           endTime: end,
-          description: "Pomodoro focus",
+          description: current.description.trim() || "Pomodoro focus",
         })
           .then((result) => {
             if (!result.ok) toast.error(result.error);
@@ -332,6 +336,10 @@ export function PomodoroProvider({
 
   const setItemId = React.useCallback((id: string | null) => {
     setRun((current) => ({ ...current, itemId: id }));
+  }, []);
+
+  const setDescription = React.useCallback((description: string) => {
+    setRun((current) => ({ ...current, description: description.slice(0, 280) }));
   }, []);
 
   const start = React.useCallback(() => {
@@ -453,7 +461,7 @@ export function PomodoroProvider({
           itemId: current.itemId,
           startTime: new Date(nowMs - active).toISOString(),
           endTime: new Date(nowMs).toISOString(),
-          description: "Pomodoro focus (ended early)",
+          description: current.description.trim() || "Pomodoro focus (ended early)",
         })
           .then((result) => {
             if (result.ok) {
@@ -554,12 +562,14 @@ export function PomodoroProvider({
       completed,
       focusSeconds,
       itemId: run.itemId,
+      description: run.description ?? "",
       active: run.status !== "idle",
       isPro,
       windowOpen,
       openWindow,
       closeWindow,
       setItemId,
+      setDescription,
       setCustomMinutes,
       updateSettings,
       start,
@@ -576,6 +586,7 @@ export function PomodoroProvider({
       completed,
       focusSeconds,
       setItemId,
+      setDescription,
       setCustomMinutes,
       updateSettings,
       start,

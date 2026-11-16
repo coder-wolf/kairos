@@ -26,7 +26,6 @@ import {
 } from "lucide-react";
 import { logout } from "@/app/actions/auth";
 import { Brand } from "@/components/brand";
-import { StartPomodoroButton } from "@/components/pomodoro/start-pomodoro-button";
 import { useQuickActions } from "@/components/quick-actions";
 import { useTimer } from "@/components/timer/timer-provider";
 import { usePomodoro } from "@/components/pomodoro/pomodoro-provider";
@@ -100,15 +99,18 @@ export function SidebarContent({
   const pomodoro = usePomodoro();
   const [loggingOut, startLogout] = React.useTransition();
 
-  const primary = [
+  const workspace = [
     { href: "/dashboard", label: "Home", icon: House },
     { href: "/workspace", label: "Projects", icon: Network, badge: itemCount },
     { href: "/goals", label: "Goals & Habits", icon: Target, badge: activeGoalCount },
+  ];
+
+  const tracking = [
+    { href: "/timer", label: "Timer", icon: Timer },
     { href: "/calendar", label: "Calendar", icon: CalendarRange },
   ];
 
-  const plan = [
-    { href: "/pomodoro", label: "Pomodoro", icon: Timer },
+  const insights = [
     { href: "/analytics", label: "Analytics", icon: BarChart3 },
     { href: "/history", label: "Time History", icon: History },
   ];
@@ -206,10 +208,6 @@ export function SidebarContent({
             <Play className="h-3.5 w-3.5 fill-current" />
             Start Timer
           </button>
-          <StartPomodoroButton
-            className="h-10 w-full text-[13px] font-bold"
-            label="Start Pomodoro"
-          />
         </div>
         ) : null}
         <div className="grid grid-cols-2 gap-2">
@@ -240,16 +238,25 @@ export function SidebarContent({
         <div>
           <p className="mb-1.5 px-3 text-[10px] font-bold uppercase tracking-[0.16em] text-muted-2">Workspace</p>
           <div className="space-y-0.5">
-            {primary.map((entry) => (
+            {workspace.map((entry) => (
               <SidebarNavLink key={entry.href} {...entry} pathname={pathname} onNavigate={onNavigate} />
             ))}
           </div>
         </div>
 
         <div>
-          <p className="mb-1.5 px-3 text-[10px] font-bold uppercase tracking-[0.16em] text-muted-2">Plan & review</p>
+          <p className="mb-1.5 px-3 text-[10px] font-bold uppercase tracking-[0.16em] text-muted-2">Tracking</p>
           <div className="space-y-0.5">
-            {plan.map((entry) => (
+            {tracking.map((entry) => (
+              <SidebarNavLink key={entry.href} {...entry} pathname={pathname} onNavigate={onNavigate} />
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <p className="mb-1.5 px-3 text-[10px] font-bold uppercase tracking-[0.16em] text-muted-2">Insights</p>
+          <div className="space-y-0.5">
+            {insights.map((entry) => (
               <SidebarNavLink key={entry.href} {...entry} pathname={pathname} onNavigate={onNavigate} />
             ))}
           </div>
