@@ -29,7 +29,7 @@ export default async function TimerPage({
 
   return (
     <div className="flex h-[calc(100dvh-7rem)] flex-col gap-3 animate-fade-in md:h-[calc(100dvh-8rem)] lg:h-[calc(100dvh-9rem)] xl:h-auto xl:space-y-6">
-      <header className="hidden xl:flex xl:flex-col xl:gap-4 md:flex-row md:items-end md:justify-between">
+      <header className="hidden xl:flex xl:flex-row xl:items-end xl:justify-between xl:gap-4">
         <div>
           <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-2">One clock at a time</p>
           <h1 className="mt-1.5 flex items-center gap-3 text-[30px] font-extrabold leading-tight tracking-[-0.04em] md:text-[38px]">
