@@ -177,11 +177,8 @@ function TimerContent({ items }: { items: ItemOption[] }) {
           items={items}
           value={projectId}
           onChange={(value) => {
-            if (active) {
-              if (value) changeItem(value);
-            } else {
-              setSelectedId(value);
-            }
+            if (active) changeItem(value || null);
+            else setSelectedId(value);
           }}
         />
         <div>

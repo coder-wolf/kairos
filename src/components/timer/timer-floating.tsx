@@ -409,14 +409,12 @@ export function TimerFloating({ items }: { items: ItemOption[] }) {
 
             <div className="mt-2">
               <Select
-                value={timer.itemId}
-                onChange={(event) => {
-                  if (event.target.value) changeItem(event.target.value);
-                }}
+                value={timer.isUnassigned ? "" : timer.itemId}
+                onChange={(event) => changeItem(event.target.value || null)}
                 className="h-9 bg-surface/85 text-[11px]"
                 aria-label="Project for this timer"
               >
-                <option value="">{timer.isUnassigned ? "Add a project (optional)" : "Change project…"}</option>
+                <option value="">No project</option>
                 {options.map((option) => (
                   <option key={option.id} value={option.id}>
                     {"— ".repeat(option.depth)}

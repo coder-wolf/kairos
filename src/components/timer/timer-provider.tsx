@@ -31,7 +31,7 @@ type TimerContextValue = {
   discard: () => void;
   setDescription: (description: string) => void;
   openChangeItem: () => void;
-  changeItem: (itemId: string) => void;
+  changeItem: (itemId: string | null) => void;
   windowOpen: boolean;
   openWindow: () => void;
   closeWindow: () => void;
@@ -70,7 +70,7 @@ export function TimerProvider({
     setChangeOpen(true);
   }, []);
 
-  const changeItem = React.useCallback((itemId: string) => {
+  const changeItem = React.useCallback((itemId: string | null) => {
     startTransition(async () => {
       const result = await changeTimerItem(itemId);
       if (!result.ok) {

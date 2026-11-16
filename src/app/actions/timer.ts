@@ -49,12 +49,14 @@ export async function startTimer(
   return { ok: true, timer: snapshot(timer) };
 }
 
-export async function changeTimerItem(itemId: string): Promise<TimerActionResult> {
+export async function changeTimerItem(itemId: string | null): Promise<TimerActionResult> {
   const { user, workspace } = await requireWorkspace();
 
-  const item = await db.item.findFirst({
-    where: { id: itemId, workspaceId: workspace.id, archivedAt: null, isSystem: false },
-  });
+  const item = itemId
+    ? await db.item.findFirst({
+        where: { id: itemId, workspaceId: workspace.id, archivedAt: null, isSystem: false },
+      })
+    : await ensureUnassignedItem(workspace.id);
   if (!item) return { ok: false, error: "That item is archived or no longer exists." };
 
   const existing = await getTimer(user.id);
@@ -62,7 +64,7 @@ export async function changeTimerItem(itemId: string): Promise<TimerActionResult
 
   const timer = await db.timerState.update({
     where: { id: existing.id },
-    data: { itemId },
+    data: { itemId: item.id },
     include: { item: true },
   });
 
