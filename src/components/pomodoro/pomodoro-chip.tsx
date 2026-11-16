@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowUpRight, Coffee, Flame, Leaf, Pause, Play } from "lucide-react";
+import { ArrowUpRight, Coffee, Flame, Leaf, Pause, Play, Square } from "lucide-react";
 import { phaseColor, phaseLabel, usePomodoro, type PomodoroPhase } from "@/components/pomodoro/pomodoro-provider";
 import { cn } from "@/lib/utils";
 
@@ -16,7 +16,7 @@ function mmss(ms: number) {
 }
 
 export function PomodoroChip({ variant = "header" }: { variant?: "header" | "sidebar" | "dashboard" }) {
-  const { active, phase, status, remainingMs, toggle, openWindow } = usePomodoro();
+  const { active, phase, status, remainingMs, toggle, reset, openWindow } = usePomodoro();
   if (!active) return null;
 
   const color = phaseColor(phase);
@@ -51,6 +51,15 @@ export function PomodoroChip({ variant = "header" }: { variant?: "header" | "sid
           >
             {status === "running" ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
             {status === "running" ? "Pause" : "Resume"}
+          </button>
+          <button
+            type="button"
+            onClick={reset}
+            className="grid h-7 w-7 items-center justify-center rounded-md bg-danger-soft text-danger transition-colors hover:bg-danger/15"
+            aria-label="End pomodoro"
+            title="End pomodoro"
+          >
+            <Square className="h-3 w-3" />
           </button>
           <button
             type="button"
