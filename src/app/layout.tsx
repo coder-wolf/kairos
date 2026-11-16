@@ -24,14 +24,38 @@ const geistMono = Geist_Mono({
   display: "swap",
 });
 
+const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://kairos-app.live";
+const description =
+  "Kairos is a personal productivity workspace for time tracking, time-based goals, habits, and calm analytics.";
+
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "https://kairos-app.live"),
+  metadataBase: new URL(appUrl),
   title: {
     default: "Kairos — Time well spent",
     template: "%s · Kairos",
   },
-  description:
-    "Kairos is a personal productivity workspace for time tracking, time-based goals, habits, and calm analytics.",
+  description,
+  openGraph: {
+    type: "website",
+    url: "/",
+    siteName: "Kairos",
+    title: "Kairos — Time well spent",
+    description,
+    images: [
+      {
+        url: "/og.png",
+        width: 1200,
+        height: 630,
+        alt: "Kairos dashboard showing time tracked, goals, and projects",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Kairos — Time well spent",
+    description,
+    images: ["/og.png"],
+  },
 };
 
 export const viewport: Viewport = {
