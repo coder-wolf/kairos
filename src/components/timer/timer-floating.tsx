@@ -255,6 +255,16 @@ export function TimerFloating({ items }: { items: ItemOption[] }) {
             </button>
             <button
               type="button"
+              onClick={stop}
+              disabled={pending}
+              className="grid h-8 w-8 place-items-center rounded-lg text-danger transition-colors hover:bg-danger-soft disabled:opacity-60"
+              aria-label="Stop and save timer"
+              title="Stop and save"
+            >
+              <Square className="h-3.5 w-3.5" />
+            </button>
+            <button
+              type="button"
               onClick={openWindow}
               className="grid h-8 w-8 place-items-center rounded-lg text-muted transition-colors hover:bg-surface-2 hover:text-text"
               aria-label="Open timer window"

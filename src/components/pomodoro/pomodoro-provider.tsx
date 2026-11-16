@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { createPomodoroSession } from "@/app/actions/sessions";
 import { useTimer } from "@/components/timer/timer-provider";
-import { formatDuration } from "@/lib/utils";
 
 export type PomodoroPhase = "focus" | "short_break" | "long_break";
 export type PomodoroStatus = "idle" | "running" | "paused";
@@ -257,12 +256,7 @@ export function PomodoroProvider({
         })
           .then((result) => {
             if (!result.ok) toast.error(result.error);
-            else {
-              toast.success("Focus block saved", {
-                description: `${formatDuration(Math.round(workedMs / 1000))} added to your history.`,
-              });
-              router.refresh();
-            }
+            else router.refresh();
           })
           .catch(() => toast.error("Could not save the focus block."));
       }
@@ -296,7 +290,6 @@ export function PomodoroProvider({
           phaseId: null,
         });
       }
-      toast.success("Focus complete", { description: longBreak ? "Take the long break — you earned it." : "Time for a short break." });
     } else {
       const focusMs = phaseDurationMs("focus", currentSettings);
       if (currentSettings.sound) playChime();
@@ -327,7 +320,6 @@ export function PomodoroProvider({
           phaseId: null,
         });
       }
-      toast("Break finished", { description: currentSettings.autoStartFocus ? "The next focus block has begun." : "Ready when you are." });
     }
   }, [now, hydrated, run.status, run.endsAt, run.phaseId, router]);
 
@@ -466,7 +458,6 @@ export function PomodoroProvider({
           .then((result) => {
             if (result.ok) {
               setFocusSeconds((value) => value + Math.round(active / 1000));
-              toast.success("Partial focus saved");
               router.refresh();
             }
           })

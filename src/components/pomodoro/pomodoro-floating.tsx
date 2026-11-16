@@ -396,6 +396,15 @@ export function PomodoroFloating({ items }: { items: ItemOption[] }) {
             </button>
             <button
               type="button"
+              onClick={reset}
+              className="grid h-8 w-8 place-items-center rounded-lg text-danger transition-colors hover:bg-danger-soft"
+              aria-label="End pomodoro"
+              title="End pomodoro"
+            >
+              <Square className="h-3.5 w-3.5" />
+            </button>
+            <button
+              type="button"
               onClick={openWindow}
               className="grid h-8 w-8 place-items-center rounded-lg text-muted transition-colors hover:bg-surface-2 hover:text-text"
               aria-label="Open pomodoro window"

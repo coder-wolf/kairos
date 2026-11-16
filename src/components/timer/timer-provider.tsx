@@ -18,7 +18,7 @@ import { Input } from "@/components/ui/input";
 import { flattenItemOptions } from "@/lib/item-options";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { ItemOption, TimerSnapshot } from "@/lib/types";
-import { cn, formatClock, formatDuration } from "@/lib/utils";
+import { cn, formatClock } from "@/lib/utils";
 
 type TimerContextValue = {
   timer: TimerSnapshot | null;
@@ -79,7 +79,6 @@ export function TimerProvider({
       }
       if ("timer" in result) setTimer(result.timer);
       setChangeOpen(false);
-      toast.success(`Timer moved to ${result.timer?.itemName ?? "the new project"}`);
       router.refresh();
     });
   }, [router]);
@@ -110,7 +109,6 @@ export function TimerProvider({
           return;
         }
         setTimer(result.timer);
-        if (result.timer) toast.success(`Tracking ${result.timer.itemName}`);
         router.refresh();
       });
     },
@@ -127,7 +125,6 @@ export function TimerProvider({
       if ("conflict" in result) return;
       setTimer(result.timer);
       setConflict(null);
-      if (result.timer) toast.success(`Tracking ${result.timer.itemName}`);
       router.refresh();
     });
   };
@@ -157,7 +154,6 @@ export function TimerProvider({
   }, [router]);
 
   const stop = React.useCallback(() => {
-    const saved = elapsed;
     startTransition(async () => {
       const result = await stopTimer();
       if (!result.ok) {
@@ -166,10 +162,9 @@ export function TimerProvider({
       }
       setTimer(null);
       setWindowOpen(false);
-      toast.success(`Saved ${formatDuration(saved, { zero: "a moment" })}${timer ? ` on ${timer.itemName}` : ""}`);
       router.refresh();
     });
-  }, [elapsed, router, timer]);
+  }, [router]);
 
   const discard = React.useCallback(() => {
     startTransition(async () => {
@@ -180,7 +175,6 @@ export function TimerProvider({
       }
       setTimer(null);
       setWindowOpen(false);
-      toast("Timer discarded without saving");
       router.refresh();
     });
   }, [router]);
@@ -191,7 +185,6 @@ export function TimerProvider({
         const result = await updateTimerDescription(description);
         if (result.ok && "timer" in result) {
           setTimer(result.timer);
-          toast.success("Timer note saved");
           router.refresh();
         }
       });
@@ -333,7 +326,6 @@ export function TimerProvider({
                     if (result.ok) {
                       setTimer(null);
                       setWindowOpen(false);
-                      toast.success("Previous session saved");
                       router.refresh();
                     }
                   });
