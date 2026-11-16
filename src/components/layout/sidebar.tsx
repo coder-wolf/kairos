@@ -25,6 +25,7 @@ import {
   Timer,
 } from "lucide-react";
 import { logout } from "@/app/actions/auth";
+import { StartPomodoroButton } from "@/components/pomodoro/start-pomodoro-button";
 import { Brand } from "@/components/brand";
 import { useQuickActions } from "@/components/quick-actions";
 import { useTimer } from "@/components/timer/timer-provider";
@@ -208,6 +209,7 @@ export function SidebarContent({
             <Play className="h-3.5 w-3.5 fill-current" />
             Start Timer
           </button>
+          <StartPomodoroButton className="h-10 w-full text-[13px] font-bold" label="Start Pomodoro" />
         </div>
         ) : null}
         <div className="grid grid-cols-2 gap-2">
