@@ -53,11 +53,12 @@ function ManualTimeDialogBody({
   const [pending, startTransition] = React.useTransition();
   const initialSeconds = initial ? initial.durationSeconds : Math.round((defaultDurationMinutes ?? 30) * 60);
   const systemItemId = items.find((item) => item.isSystem)?.id;
+  const hasSystemItem = Boolean(systemItemId);
   const initialItemId = initial
     ? initial.itemId === systemItemId
       ? UNASSIGNED_ITEM_ID
       : initial.itemId
-    : defaultItemId ?? "";
+    : defaultItemId ?? (hasSystemItem ? UNASSIGNED_ITEM_ID : "");
   const [itemId, setItemId] = React.useState(initialItemId);
   const [date, setDate] = React.useState(
     initial ? formatInTimeZone(new Date(initial.startTime), timezone, "yyyy-MM-dd") : defaultDate ?? todayKey,
