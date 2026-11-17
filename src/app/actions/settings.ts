@@ -102,8 +102,28 @@ export async function updatePreferences(input: PreferencesInput): Promise<Action
   return { ok: true };
 }
 
-export async function updatePassword(currentPassword: string, newPassword: string): Promise<ActionResult> {
+/**
+ * Persists the browser's IANA timezone without touching week start or theme.
+ * Called from the calendar so the saved timezone cannot drift away from the
+ * timezone the calendar (and its drag-and-drop edits) use.
+ */
+export async function syncTimezone(timezone: string): Promise<ActionResult> {
   const { user } = await requireWorkspace();
+
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: timezone });
+  } catch {
+    return { ok: false, error: "That timezone is not recognized." };
+  }
+
+  if (timezone === user.timezone) return { ok: true };
+
+  await db.user.update({ where: { id: user.id }, data: { timezone } });
+  revalidateApp();
+  return { ok: true };
+}
+
+export async function updatePassword(currentPassword: string, newPassword: string): Promise<ActionResult> {  const { user } = await requireWorkspace();
 
   if (newPassword.length < 8 || !/[a-zA-Z]/.test(newPassword) || !/[0-9]/.test(newPassword)) {
     return { ok: false, error: "New passwords need 8+ characters, including a letter and a number." };

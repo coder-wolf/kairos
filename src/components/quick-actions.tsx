@@ -13,7 +13,7 @@ type QuickActionsContextValue = {
   openEditItem: (id: string) => void;
   openNewGoal: (itemId?: string) => void;
   openEditGoal: (id: string) => void;
-  openManualTime: (options?: { itemId?: string; session?: SessionRow; date?: string; startTime?: string; durationMinutes?: number }) => void;
+  openManualTime: (options?: { itemId?: string; session?: SessionRow; date?: string; startTime?: string; durationMinutes?: number; timezone?: string }) => void;
   startTimerNow: () => void;
   openCommandPalette: () => void;
 };
@@ -54,6 +54,7 @@ export function QuickActionsProvider({
     date?: string;
     startTime?: string;
     durationMinutes?: number;
+    timezone?: string;
   }>({ open: false });
   const [commandOpen, setCommandOpen] = React.useState(false);
   const { start } = useTimer();
@@ -72,6 +73,7 @@ export function QuickActionsProvider({
           date: options?.date,
           startTime: options?.startTime,
           durationMinutes: options?.durationMinutes,
+          timezone: options?.timezone,
         }),
       startTimerNow: () => start(),
       openCommandPalette: () => setCommandOpen(true),
@@ -121,7 +123,7 @@ export function QuickActionsProvider({
         defaultDate={timeDialog.date}
         defaultStartTime={timeDialog.startTime}
         defaultDurationMinutes={timeDialog.durationMinutes}
-        timezone={user.timezone}
+        timezone={timeDialog.timezone ?? user.timezone}
         todayKey={todayKey}
       />
       <CommandPalette

@@ -13,6 +13,25 @@ const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 class SessionInputError extends Error {}
 
+function isValidTimezone(value: string) {
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: value });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * The calendar can render in a different timezone than the one saved on the
+ * account (for example right after travel or when the URL carries a tz). The
+ * typed date and time therefore have to be interpreted in the same timezone
+ * the user dragged in, otherwise the entry lands at a shifted hour.
+ */
+function resolveSessionTimezone(input: SessionInput, fallback: string) {
+  return input.timezone && isValidTimezone(input.timezone) ? input.timezone : fallback;
+}
+
 function parseSessionTimes(input: SessionInput, timezone: string) {
   if (!DATE_PATTERN.test(input.date)) {
     throw new SessionInputError("Choose a valid date.");
@@ -49,7 +68,7 @@ export async function createSession(input: SessionInput): Promise<ActionResult> 
   if (!item) return { ok: false, error: "Pick an item to track time against." };
 
   try {
-    const times = parseSessionTimes(input, user.timezone);
+    const times = parseSessionTimes(input, resolveSessionTimezone(input, user.timezone));
     const session = await db.timeSession.create({
       data: {
         userId: user.id,
@@ -88,7 +107,7 @@ export async function updateSession(input: SessionInput): Promise<ActionResult> 
   if (!item) return { ok: false, error: "Pick a valid item." };
 
   try {
-    const times = parseSessionTimes(input, user.timezone);
+    const times = parseSessionTimes(input, resolveSessionTimezone(input, user.timezone));
     await db.timeSession.update({
       where: { id: existing.id },
       data: {

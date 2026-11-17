@@ -182,6 +182,7 @@ export function DayTimeline({
       date: todayKey,
       startTime: timeLabel(startMin),
       durationMinutes: Math.max(15, endMin - startMin),
+      timezone,
     });
   };
 
@@ -243,7 +244,7 @@ export function DayTimeline({
     const startMin = drag.previewStartMin;
     setDragPreview(null);
     if (!drag.moved) {
-      openManualTime({ itemId: drag.session.itemId, session: drag.session });
+      openManualTime({ itemId: drag.session.itemId, session: drag.session, timezone });
       return;
     }
     suppressClick.current = drag.session.id;
@@ -258,6 +259,7 @@ export function DayTimeline({
       startTime: timeLabel(startMin),
       durationMinutes: drag.durationMin,
       description: drag.session.description ?? undefined,
+      timezone,
     });
     if (!result.ok) {
       toast.error(result.error);
@@ -375,7 +377,7 @@ export function DayTimeline({
                       suppressClick.current = null;
                       return;
                     }
-                    openManualTime({ itemId: segment.session.itemId, session: segment.session });
+                    openManualTime({ itemId: segment.session.itemId, session: segment.session, timezone });
                   }}
                   onPointerDown={(event) => startSessionDrag(event, segment.session, segment)}
                   onPointerMove={moveSessionDrag}

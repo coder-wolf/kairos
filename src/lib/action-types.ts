@@ -41,6 +41,8 @@ export type SessionInput = {
   durationMinutes: number;
   description?: string;
   source?: SessionSource;
+  /** Timezone the date and startTime were entered in; defaults to the saved user timezone. */
+  timezone?: string;
 };
 
 export type ProfileInput = {

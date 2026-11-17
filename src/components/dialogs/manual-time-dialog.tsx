@@ -86,6 +86,7 @@ function ManualTimeDialogBody({
         startTime: startTime || undefined,
         durationMinutes: totalSeconds / 60,
         description,
+        timezone,
       };
       const result = initial ? await updateSession(payload) : await createSession(payload);
       if (!result.ok) {

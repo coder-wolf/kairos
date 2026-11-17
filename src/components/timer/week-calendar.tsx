@@ -2,12 +2,21 @@
 
 import * as React from "react";
 import { formatInTimeZone } from "date-fns-tz";
-import { ChevronLeft, ChevronRight, Clock3, Globe2, Layers, LocateFixed } from "lucide-react";
+import { ChevronLeft, ChevronRight, Clock3, Globe2, Layers, LocateFixed, NotebookPen, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { updateSession } from "@/app/actions/sessions";
+import { deleteSession, updateSession } from "@/app/actions/sessions";
 import Link from "next/link";
 import { useQuickActions } from "@/components/quick-actions";
+import { ConfirmDialog } from "@/components/dialogs/confirm-dialog";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuLabel,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 import { endOfDayKey, startOfDayKey } from "@/lib/time";
 import type { SessionRow } from "@/lib/types";
 import { cn, formatDuration } from "@/lib/utils";
@@ -135,6 +144,12 @@ export function WeekCalendar({
     preview: { dayKey: string; startMin: number } | null;
   } | null>(null);
   const suppressClick = React.useRef<string | null>(null);
+  const [contextTarget, setContextTarget] = React.useState<
+    | { kind: "session"; session: SessionRow }
+    | { kind: "slot"; dayKey: string; startMin: number }
+    | null
+  >(null);
+  const [deleteTarget, setDeleteTarget] = React.useState<SessionRow | null>(null);
 
   React.useEffect(() => {
     const id = window.setInterval(() => setNow(Date.now()), 60_000);
@@ -240,6 +255,7 @@ export function WeekCalendar({
       date: drag.dayKey,
       startTime: timeLabel(startMin),
       durationMinutes: Math.max(15, endMin - startMin),
+      timezone,
     });
   };
 
@@ -306,7 +322,7 @@ export function WeekCalendar({
     const preview = drag.preview;
     setDragPreview(null);
     if (!drag.moved) {
-      openManualTime({ itemId: drag.session.itemId, session: drag.session });
+      openManualTime({ itemId: drag.session.itemId, session: drag.session, timezone });
       return;
     }
     suppressClick.current = drag.session.id;
@@ -321,6 +337,7 @@ export function WeekCalendar({
       startTime: timeLabel(preview.startMin),
       durationMinutes: drag.durationMin,
       description: drag.session.description ?? undefined,
+      timezone,
     });
     if (!result.ok) {
       toast.error(result.error);
@@ -328,6 +345,28 @@ export function WeekCalendar({
     }
     router.refresh();
   };
+
+  const handleContextMenu = (event: React.MouseEvent<HTMLDivElement>) => {
+    const target = event.target as HTMLElement;
+    const block = target.closest<HTMLElement>("[data-session-id]");
+    if (block) {
+      const session = sessions.find((candidate) => candidate.id === block.dataset.sessionId);
+      setContextTarget(session ? { kind: "session", session } : null);
+      return;
+    }
+    const dayElement = target.closest<HTMLElement>("[data-day-key]");
+    if (!dayElement) {
+      setContextTarget(null);
+      return;
+    }
+    setContextTarget({
+      kind: "slot",
+      dayKey: dayElement.dataset.dayKey ?? "",
+      startMin: snapMinutes(event.clientY, dayElement),
+    });
+  };
+
+  const slotDay = contextTarget?.kind === "slot" ? days.find((day) => day.key === contextTarget.dayKey) : null;
 
   return (
     <section className="card flex h-full min-h-0 flex-col overflow-hidden">
@@ -393,7 +432,7 @@ export function WeekCalendar({
       </div>
       <div className="flex items-center justify-between border-b border-border px-4 py-1.5 text-[9px] font-medium text-muted-2">
         <span className="font-bold uppercase tracking-[0.12em]">Weekly time blocking</span>
-        <span>Drag empty space to add · drag a block to move · click to edit</span>
+        <span>Drag to add · drag a block to move · right-click for options</span>
       </div>
 
       <div className="scroll-thin min-h-0 flex-1 overflow-x-auto">
@@ -440,8 +479,10 @@ export function WeekCalendar({
                 ))}
               </div>
 
-              <div className="grid flex-1 grid-cols-7">
-                {days.map((day) => (
+              <ContextMenu>
+                <ContextMenuTrigger asChild>
+                  <div className="grid flex-1 grid-cols-7" onContextMenuCapture={handleContextMenu}>
+                    {days.map((day) => (
                   <div
                     key={day.key}
                     data-day-key={day.key}
@@ -496,13 +537,14 @@ export function WeekCalendar({
                         <button
                           key={`${segment.session.id}-${segment.startMin}-${segment.lane}`}
                           type="button"
+                          data-session-id={segment.session.id}
                           onClick={(event) => {
                             event.stopPropagation();
                             if (suppressClick.current === segment.session.id) {
                               suppressClick.current = null;
                               return;
                             }
-                            openManualTime({ itemId: segment.session.itemId, session: segment.session });
+                            openManualTime({ itemId: segment.session.itemId, session: segment.session, timezone });
                           }}
                           onPointerDown={(event) => startSessionDrag(event, segment.session, segment, day.key)}
                           onPointerMove={moveSessionDrag}
@@ -559,12 +601,79 @@ export function WeekCalendar({
                       </div>
                     ) : null}
                   </div>
-                ))}
-              </div>
+                    ))}
+                  </div>
+                </ContextMenuTrigger>
+                <ContextMenuContent>
+                  {contextTarget?.kind === "session" ? (
+                    <>
+                      <ContextMenuLabel>{contextTarget.session.itemName}</ContextMenuLabel>
+                      <ContextMenuItem
+                        onSelect={() =>
+                          openManualTime({
+                            itemId: contextTarget.session.itemId,
+                            session: contextTarget.session,
+                            timezone,
+                          })
+                        }
+                      >
+                        <NotebookPen className="h-3.5 w-3.5 text-muted" /> Edit entry
+                      </ContextMenuItem>
+                      <ContextMenuSeparator />
+                      <ContextMenuItem destructive onSelect={() => setDeleteTarget(contextTarget.session)}>
+                        <Trash2 className="h-3.5 w-3.5" /> Delete entry
+                      </ContextMenuItem>
+                    </>
+                  ) : contextTarget?.kind === "slot" && slotDay ? (
+                    <>
+                      <ContextMenuLabel>
+                        {slotDay.label} {slotDay.dayNumber} · {timeLabel(contextTarget.startMin)}
+                      </ContextMenuLabel>
+                      <ContextMenuItem
+                        onSelect={() =>
+                          openManualTime({
+                            date: contextTarget.dayKey,
+                            startTime: timeLabel(contextTarget.startMin),
+                            durationMinutes: 30,
+                            timezone,
+                          })
+                        }
+                      >
+                        <Clock3 className="h-3.5 w-3.5 text-muted" /> Add time at {timeLabel(contextTarget.startMin)}
+                      </ContextMenuItem>
+                    </>
+                  ) : null}
+                </ContextMenuContent>
+              </ContextMenu>
             </div>
           </div>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+        title="Delete this time entry?"
+        description={
+          deleteTarget
+            ? `${formatDuration(deleteTarget.durationSeconds, { showSeconds: true })} on ${deleteTarget.itemName} will be removed. Parent totals and goals will update immediately.`
+            : ""
+        }
+        confirmLabel="Delete entry"
+        destructive
+        onConfirm={async () => {
+          if (!deleteTarget) return { ok: false, error: "Entry not found." };
+          const result = await deleteSession(deleteTarget.id);
+          if (result.ok) {
+            toast.success("Time entry deleted");
+            setDeleteTarget(null);
+            router.refresh();
+          }
+          return result;
+        }}
+      />
     </section>
   );
 }
