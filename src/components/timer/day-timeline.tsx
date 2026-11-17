@@ -2,11 +2,20 @@
 
 import * as React from "react";
 import { formatInTimeZone } from "date-fns-tz";
-import { LocateFixed } from "lucide-react";
+import { Clock3, LocateFixed, NotebookPen, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { updateSession } from "@/app/actions/sessions";
+import { deleteSession, updateSession } from "@/app/actions/sessions";
 import { useQuickActions } from "@/components/quick-actions";
+import { ConfirmDialog } from "@/components/dialogs/confirm-dialog";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuLabel,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 import { endOfDayKey, startOfDayKey } from "@/lib/time";
 import type { SessionRow } from "@/lib/types";
 import { cn, formatDuration } from "@/lib/utils";
@@ -98,6 +107,10 @@ export function DayTimeline({
     previewStartMin: number | null;
   } | null>(null);
   const suppressClick = React.useRef<string | null>(null);
+  const [contextTarget, setContextTarget] = React.useState<
+    { kind: "session"; session: SessionRow } | { kind: "slot"; startMin: number } | null
+  >(null);
+  const [deleteTarget, setDeleteTarget] = React.useState<SessionRow | null>(null);
 
   React.useEffect(() => {
     const id = window.setInterval(() => setNow(Date.now()), 60_000);
@@ -268,6 +281,22 @@ export function DayTimeline({
     router.refresh();
   };
 
+  const handleContextMenu = (event: React.MouseEvent<HTMLDivElement>) => {
+    const target = event.target as HTMLElement;
+    const block = target.closest<HTMLElement>("[data-session-id]");
+    if (block) {
+      const session = sessions.find((candidate) => candidate.id === block.dataset.sessionId);
+      setContextTarget(session ? { kind: "session", session } : null);
+      return;
+    }
+    const column = target.closest<HTMLElement>("[data-day-column]");
+    if (!column) {
+      setContextTarget(null);
+      return;
+    }
+    setContextTarget({ kind: "slot", startMin: snapMinutes(event.clientY, column) });
+  };
+
   return (
     <section
       className={cn(
@@ -301,7 +330,7 @@ export function DayTimeline({
       </div>
 
       <div className="border-b border-border px-5 py-2 text-[10px] font-medium text-muted-2">
-        Drag empty space to add · drag a block to move · click to edit
+        Drag to add · drag a block to move · right-click for options
       </div>
 
       <div
@@ -324,8 +353,11 @@ export function DayTimeline({
             ))}
           </div>
 
+          <ContextMenu>
+          <ContextMenuTrigger asChild>
           <div
             data-day-column
+            onContextMenuCapture={handleContextMenu}
             onPointerDown={beginSelection}
             onPointerMove={updateSelection}
             onPointerUp={finishSelection}
@@ -371,6 +403,7 @@ export function DayTimeline({
                 <button
                   key={`${segment.session.id}-${segment.startMin}-${segment.lane}`}
                   type="button"
+                  data-session-id={segment.session.id}
                   onClick={(event) => {
                     event.stopPropagation();
                     if (suppressClick.current === segment.session.id) {
@@ -434,8 +467,73 @@ export function DayTimeline({
               </span>
             </div>
           </div>
+          </ContextMenuTrigger>
+          <ContextMenuContent>
+            {contextTarget?.kind === "session" ? (
+              <>
+                <ContextMenuLabel>{contextTarget.session.itemName}</ContextMenuLabel>
+                <ContextMenuItem
+                  onSelect={() =>
+                    openManualTime({
+                      itemId: contextTarget.session.itemId,
+                      session: contextTarget.session,
+                      timezone,
+                    })
+                  }
+                >
+                  <NotebookPen className="h-3.5 w-3.5 text-muted" /> Edit entry
+                </ContextMenuItem>
+                <ContextMenuSeparator />
+                <ContextMenuItem destructive onSelect={() => setDeleteTarget(contextTarget.session)}>
+                  <Trash2 className="h-3.5 w-3.5" /> Delete entry
+                </ContextMenuItem>
+              </>
+            ) : contextTarget?.kind === "slot" ? (
+              <>
+                <ContextMenuLabel>{timeLabel(contextTarget.startMin)}</ContextMenuLabel>
+                <ContextMenuItem
+                  onSelect={() =>
+                    openManualTime({
+                      date: todayKey,
+                      startTime: timeLabel(contextTarget.startMin),
+                      durationMinutes: 30,
+                      timezone,
+                    })
+                  }
+                >
+                  <Clock3 className="h-3.5 w-3.5 text-muted" /> Add time at {timeLabel(contextTarget.startMin)}
+                </ContextMenuItem>
+              </>
+            ) : null}
+          </ContextMenuContent>
+          </ContextMenu>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+        title="Delete this time entry?"
+        description={
+          deleteTarget
+            ? `${formatDuration(deleteTarget.durationSeconds, { showSeconds: true })} on ${deleteTarget.itemName} will be removed. Parent totals and goals will update immediately.`
+            : ""
+        }
+        confirmLabel="Delete entry"
+        destructive
+        onConfirm={async () => {
+          if (!deleteTarget) return { ok: false, error: "Entry not found." };
+          const result = await deleteSession(deleteTarget.id);
+          if (result.ok) {
+            toast.success("Time entry deleted");
+            setDeleteTarget(null);
+            router.refresh();
+          }
+          return result;
+        }}
+      />
     </section>
   );
 }

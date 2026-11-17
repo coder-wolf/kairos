@@ -30,6 +30,14 @@ import { useQuickActions } from "@/components/quick-actions";
 import { LiveTimer } from "@/components/timer/live-timer";
 import { useTimer } from "@/components/timer/timer-provider";
 import { Badge } from "@/components/ui/badge";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuLabel,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 import { Button, IconButton } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
@@ -492,6 +500,8 @@ export function WorkspaceTree({ items, weekLabel }: { items: WorkspaceItem[]; we
             </div>
           </form>
         ) : (
+        <ContextMenu>
+        <ContextMenuTrigger asChild>
         <div
           draggable={sortMode === "custom"}
           onDragStart={(event) => {
@@ -681,6 +691,42 @@ export function WorkspaceTree({ items, weekLabel }: { items: WorkspaceItem[]; we
             </span>
           ) : null}
         </div>
+        </ContextMenuTrigger>
+        <ContextMenuContent>
+          <ContextMenuLabel>{node.name}</ContextMenuLabel>
+          <ContextMenuItem onSelect={() => start(node.id)}>
+            <Play className="h-4 w-4" /> Start timer
+          </ContextMenuItem>
+          <ContextMenuItem onSelect={() => openManualTime({ itemId: node.id })}>
+            <ClockPlus className="h-4 w-4" /> Add time
+          </ContextMenuItem>
+          <ContextMenuItem onSelect={() => openNewGoal(node.id)}>
+            <Target className="h-4 w-4" /> New goal
+          </ContextMenuItem>
+          <ContextMenuSeparator />
+          <ContextMenuItem onSelect={() => openNewItem(node.id)}>
+            <FolderPlus className="h-4 w-4" /> New child project
+          </ContextMenuItem>
+          <ContextMenuItem onSelect={() => startEditing(node)}>
+            <Pencil className="h-4 w-4" /> Edit details
+          </ContextMenuItem>
+          <ContextMenuItem
+            onSelect={() => {
+              setMoving(node);
+              setMoveParent(node.parentId ?? "");
+            }}
+          >
+            <MoveRight className="h-4 w-4" /> Move item
+          </ContextMenuItem>
+          <ContextMenuSeparator />
+          <ContextMenuItem destructive onSelect={() => setToArchive(node)}>
+            <Archive className="h-4 w-4" /> Archive
+          </ContextMenuItem>
+          <ContextMenuItem destructive onSelect={() => setToDelete(node)}>
+            <Trash2 className="h-4 w-4" /> Delete
+          </ContextMenuItem>
+        </ContextMenuContent>
+        </ContextMenu>
         )}
         {!isCollapsed ? (
           <div>

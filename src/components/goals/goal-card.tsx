@@ -22,6 +22,14 @@ import { LiveTimer } from "@/components/timer/live-timer";
 import { useTimer } from "@/components/timer/timer-provider";
 import { Badge } from "@/components/ui/badge";
 import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuLabel,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -96,6 +104,8 @@ export function GoalCard({
 
   return (
     <>
+      <ContextMenu>
+      <ContextMenuTrigger asChild>
       <article
         className={cn(
           "group relative rounded-2xl border border-border bg-surface p-4 transition-colors hover:border-border-strong/70",
@@ -245,6 +255,36 @@ export function GoalCard({
           </div>
         ) : null}
       </article>
+      </ContextMenuTrigger>
+      <ContextMenuContent>
+        <ContextMenuLabel>{goal.name}</ContextMenuLabel>
+        <ContextMenuItem onSelect={() => openEditGoal(goal.id)}>
+          <Pencil className="h-4 w-4" /> Edit goal
+        </ContextMenuItem>
+        <ContextMenuItem
+          onSelect={() => {
+            startTransition(async () => {
+              const result = await setGoalStatus(goal.id, isPaused ? "ACTIVE" : "PAUSED");
+              if (!result.ok) toast.error(result.error);
+              else {
+                toast.success(isPaused ? "Goal resumed" : "Goal paused");
+                router.refresh();
+              }
+            });
+          }}
+        >
+          {isPaused ? <RotateCcw className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
+          {isPaused ? "Resume goal" : "Pause goal"}
+        </ContextMenuItem>
+        <ContextMenuItem onSelect={() => openManualTime({ itemId: goal.itemId })}>
+          <CalendarClock className="h-4 w-4" /> Add time
+        </ContextMenuItem>
+        <ContextMenuSeparator />
+        <ContextMenuItem destructive onSelect={() => setToDelete(true)}>
+          <Trash2 className="h-4 w-4" /> Delete goal
+        </ContextMenuItem>
+      </ContextMenuContent>
+      </ContextMenu>
 
       <ConfirmDialog
         open={toDelete}

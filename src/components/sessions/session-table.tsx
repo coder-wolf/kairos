@@ -8,6 +8,14 @@ import { Flame, MoreHorizontal, Pencil, Timer, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { deleteSession } from "@/app/actions/sessions";
 import { ConfirmDialog } from "@/components/dialogs/confirm-dialog";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuLabel,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 import { useQuickActions } from "@/components/quick-actions";
 import {
   DropdownMenu,
@@ -64,7 +72,9 @@ export function SessionTable({
               const badge = sourceBadge(session.source);
               const Icon = badge.icon;
               return (
-                <tr key={session.id} className="group border-b border-border/70 last:border-b-0 hover:bg-surface-2/40">
+                <ContextMenu key={session.id}>
+                  <ContextMenuTrigger asChild>
+                    <tr className="group border-b border-border/70 last:border-b-0 hover:bg-surface-2/40">
                   <td className={compact ? "whitespace-nowrap px-3 py-2" : "whitespace-nowrap px-4 py-2.5"}>
                     <span className="block font-semibold">
                       {formatInTimeZone(new Date(session.startTime), timezone, compact ? "MMM d" : "EEE, MMM d")}
@@ -141,7 +151,19 @@ export function SessionTable({
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </td>
-                </tr>
+                    </tr>
+                  </ContextMenuTrigger>
+                  <ContextMenuContent>
+                    <ContextMenuLabel>{session.itemName}</ContextMenuLabel>
+                    <ContextMenuItem onSelect={() => openManualTime({ itemId: session.itemId, session })}>
+                      <Pencil className="h-4 w-4" /> Edit entry
+                    </ContextMenuItem>
+                    <ContextMenuSeparator />
+                    <ContextMenuItem destructive onSelect={() => setToDelete(session)}>
+                      <Trash2 className="h-4 w-4" /> Delete entry
+                    </ContextMenuItem>
+                  </ContextMenuContent>
+                </ContextMenu>
               );
             })}
           </tbody>

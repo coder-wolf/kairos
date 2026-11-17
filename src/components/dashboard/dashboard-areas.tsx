@@ -2,7 +2,17 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { ArrowRight, ChevronRight, Play, Target } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ArrowRight, ChevronRight, ClockPlus, Play, Target } from "lucide-react";
+import { useQuickActions } from "@/components/quick-actions";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuLabel,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 import { LiveTimer } from "@/components/timer/live-timer";
 import { useTimer } from "@/components/timer/timer-provider";
 import type { AreaNode } from "@/lib/types";
@@ -30,7 +40,9 @@ function buildTree(nodes: AreaNode[]): Node[] {
 }
 
 export function DashboardAreas({ nodes }: { nodes: AreaNode[] }) {
+  const router = useRouter();
   const { start, timer } = useTimer();
+  const { openManualTime, openNewGoal } = useQuickActions();
   const [expanded, setExpanded] = React.useState<Set<string>>(new Set());
   const tree = React.useMemo(() => buildTree(nodes), [nodes]);
   const maxSeconds = Math.max(1, ...tree.map((node) => node.seconds));
@@ -50,6 +62,8 @@ export function DashboardAreas({ nodes }: { nodes: AreaNode[] }) {
 
     return (
       <div key={node.id}>
+        <ContextMenu>
+        <ContextMenuTrigger asChild>
         <div
           className="group flex items-center gap-2 border-b border-border/60 py-2.5 pr-4 transition-colors last:border-b-0 hover:bg-surface-2/40"
           style={{ paddingLeft: 20 + node.depth * 18 }}
@@ -124,6 +138,24 @@ export function DashboardAreas({ nodes }: { nodes: AreaNode[] }) {
             <ArrowRight className="h-3.5 w-3.5" />
           </Link>
         </div>
+        </ContextMenuTrigger>
+        <ContextMenuContent>
+          <ContextMenuLabel>{node.name}</ContextMenuLabel>
+          <ContextMenuItem onSelect={() => start(node.id)}>
+            <Play className="h-4 w-4" /> Start timer
+          </ContextMenuItem>
+          <ContextMenuItem onSelect={() => openManualTime({ itemId: node.id })}>
+            <ClockPlus className="h-4 w-4" /> Add time
+          </ContextMenuItem>
+          <ContextMenuItem onSelect={() => openNewGoal(node.id)}>
+            <Target className="h-4 w-4" /> New goal
+          </ContextMenuItem>
+          <ContextMenuSeparator />
+          <ContextMenuItem onSelect={() => router.push(`/items/${node.id}`)}>
+            <ArrowRight className="h-4 w-4" /> Open project
+          </ContextMenuItem>
+        </ContextMenuContent>
+        </ContextMenu>
         {open ? <div>{children.map(renderNode)}</div> : null}
       </div>
     );

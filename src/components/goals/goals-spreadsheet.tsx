@@ -22,6 +22,14 @@ import {
 import { toast } from "sonner";
 import { deleteGoal, setGoalStatus } from "@/app/actions/goals";
 import { ConfirmDialog } from "@/components/dialogs/confirm-dialog";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuLabel,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 import { useQuickActions } from "@/components/quick-actions";
 import { useTimer } from "@/components/timer/timer-provider";
 import { Badge } from "@/components/ui/badge";
@@ -325,7 +333,9 @@ export function GoalsSpreadsheet({
                   const meta = GOAL_STATUS_META[row.progress.status as keyof typeof GOAL_STATUS_META] ?? GOAL_STATUS_META.in_progress;
                   const isPaused = row.goal.status === "PAUSED";
                   return (
-                    <tr key={row.goal.id} className="group">
+                    <ContextMenu key={row.goal.id}>
+                    <ContextMenuTrigger asChild>
+                    <tr className="group">
                       <td
                         className={cn(
                           "sticky left-0 z-10 border-b border-border bg-surface px-3 py-2.5 group-hover:bg-surface-2/60",
@@ -468,6 +478,39 @@ export function GoalsSpreadsheet({
                         <span className="text-[11px] font-semibold tabular-nums">{formatDuration(row.monthSeconds)}</span>
                       </td>
                     </tr>
+                    </ContextMenuTrigger>
+                    <ContextMenuContent>
+                      <ContextMenuLabel>{row.goal.name}</ContextMenuLabel>
+                      <ContextMenuItem onSelect={() => openEditGoal(row.goal.id)}>
+                        <Pencil className="h-4 w-4" /> Edit goal
+                      </ContextMenuItem>
+                      <ContextMenuItem onSelect={() => start(row.goal.itemId)}>
+                        <Play className="h-4 w-4" /> Start timer
+                      </ContextMenuItem>
+                      <ContextMenuItem onSelect={() => openManualTime({ itemId: row.goal.itemId })}>
+                        <ClockPlus className="h-4 w-4" /> Add time
+                      </ContextMenuItem>
+                      <ContextMenuItem
+                        onSelect={() => {
+                          startTransition(async () => {
+                            const result = await setGoalStatus(row.goal.id, isPaused ? "ACTIVE" : "PAUSED");
+                            if (!result.ok) toast.error(result.error);
+                            else {
+                              toast.success(isPaused ? "Goal resumed" : "Goal paused");
+                              router.refresh();
+                            }
+                          });
+                        }}
+                      >
+                        {isPaused ? <RotateCcw className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
+                        {isPaused ? "Resume goal" : "Pause goal"}
+                      </ContextMenuItem>
+                      <ContextMenuSeparator />
+                      <ContextMenuItem destructive onSelect={() => setToDelete(row.goal)}>
+                        <Trash2 className="h-4 w-4" /> Delete goal
+                      </ContextMenuItem>
+                    </ContextMenuContent>
+                    </ContextMenu>
                   );
                 })}
               </tbody>
