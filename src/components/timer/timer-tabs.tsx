@@ -39,7 +39,7 @@ export function TimerTabs({ timer, calendar }: { timer: React.ReactNode; calenda
       <div className="min-h-0 flex-1 xl:grid xl:grid-cols-[minmax(0,1fr)_minmax(380px,0.9fr)] xl:gap-5">
         <div
           className={cn(
-            "h-full min-h-0 overflow-y-auto scroll-thin pr-1 xl:h-auto xl:overflow-visible",
+            "h-full min-h-0 overflow-y-auto scroll-thin pr-1",
             tab === "timer" ? "block" : "hidden",
             "xl:block",
           )}
@@ -48,7 +48,7 @@ export function TimerTabs({ timer, calendar }: { timer: React.ReactNode; calenda
         </div>
         <div
           className={cn(
-            "h-full min-h-0 overflow-y-auto scroll-thin xl:h-auto xl:overflow-visible",
+            "h-full min-h-0 overflow-hidden",
             tab === "calendar" ? "block" : "hidden",
             "xl:block",
           )}

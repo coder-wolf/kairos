@@ -28,7 +28,7 @@ export default async function TimerPage({
   const itemOptions = toItemOptions(items);
 
   return (
-    <div className="flex h-[calc(100dvh-7rem)] flex-col gap-3 animate-fade-in md:h-[calc(100dvh-8rem)] lg:h-[calc(100dvh-9rem)] xl:h-auto xl:space-y-6">
+    <div className="flex h-[calc(100dvh-7rem)] flex-col gap-3 animate-fade-in md:h-[calc(100dvh-8rem)] lg:h-[calc(100dvh-9rem)] ">
       <header className="hidden xl:flex xl:flex-row xl:items-end xl:justify-between xl:gap-4">
         <div>
           <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-2">One clock at a time</p>

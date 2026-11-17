@@ -305,7 +305,7 @@ export function DayTimeline({
       )}
     >
       <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary via-accent to-primary" />
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-gradient-to-b from-surface-2/50 to-surface px-5 py-4">
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-border bg-gradient-to-b from-surface-2/50 to-surface px-5 py-4">
         <div>
           <h2 className="text-sm font-bold tracking-tight">Today&apos;s timeline</h2>
           <p className="text-[11px] text-muted">
@@ -329,7 +329,7 @@ export function DayTimeline({
         </button>
       </div>
 
-      <div className="border-b border-border px-5 py-2 text-[10px] font-medium text-muted-2">
+      <div className="shrink-0 border-b border-border px-5 py-2 text-[10px] font-medium text-muted-2">
         Drag to add · drag a block to move · right-click for options
       </div>
 
