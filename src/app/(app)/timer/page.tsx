@@ -17,7 +17,8 @@ export default async function TimerPage({
   searchParams: Promise<{ mode?: string }>;
 }) {
   const params = await searchParams;
-  const initialMode = params.mode === "pomodoro" ? "pomodoro" : "timer";
+  const requestedMode =
+    params.mode === "pomodoro" ? "pomodoro" : params.mode === "timer" ? "timer" : undefined;
   const { user, items } = await getAppContext();
   const now = new Date();
   const today = getDateRange("today", user.timezone, user.weekStartsOn, { now });
@@ -57,7 +58,7 @@ export default async function TimerPage({
       </header>
 
       <TimerTabs
-        timer={<TimerStudio items={itemOptions} initialMode={initialMode} />}
+        timer={<TimerStudio items={itemOptions} initialMode={requestedMode} />}
         calendar={<DayTimeline sessions={rows} todayKey={todayKey} timezone={user.timezone} fill />}
       />
     </div>

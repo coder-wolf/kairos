@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Flame, Pause, Play, SkipForward, Square, Timer as TimerIcon } from "lucide-react";
+import { Flame, Pause, Pencil, Play, SkipForward, Square, Timer as TimerIcon } from "lucide-react";
 import { ProGate } from "@/components/billing/pro-gate";
 import { phaseColor, phaseLabel, usePomodoro } from "@/components/pomodoro/pomodoro-provider";
 import { PomodoroSettingsPanel } from "@/components/pomodoro/pomodoro-settings";
@@ -55,14 +55,20 @@ function Dial({
   detail,
   status,
   statusTone,
+  onEditMain,
+  editing = false,
+  editor,
 }: {
   progress: number;
   color: string;
-  main: string;
+  main: React.ReactNode;
   eyebrow: string;
   detail: string;
   status: string;
   statusTone: "success" | "warning" | "muted";
+  onEditMain?: () => void;
+  editing?: boolean;
+  editor?: React.ReactNode;
 }) {
   const gradientId = React.useId().replace(/:/g, "");
   const size = 280;
@@ -126,9 +132,28 @@ function Dial({
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center px-4 text-center">
-          <p suppressHydrationWarning className="font-mono text-[46px] font-extrabold leading-none tracking-[-0.05em] tabular-nums">
-            {main}
-          </p>
+          {editing && editor ? (
+            editor
+          ) : onEditMain ? (
+            <button
+              type="button"
+              onClick={onEditMain}
+              className="group/time rounded-xl px-3 py-0.5 transition-colors hover:bg-surface-2/70"
+              title="Click the time to set a custom duration"
+              aria-label="Edit pomodoro duration"
+            >
+              <span suppressHydrationWarning className="block font-mono text-[46px] font-extrabold leading-none tracking-[-0.05em] tabular-nums">
+                {main}
+              </span>
+              <span className="mt-0.5 inline-flex items-center gap-1 text-[8px] font-bold uppercase tracking-[0.16em] text-muted-2 transition-colors group-hover/time:text-text">
+                <Pencil className="h-2.5 w-2.5" /> Click to edit
+              </span>
+            </button>
+          ) : (
+            <p suppressHydrationWarning className="font-mono text-[46px] font-extrabold leading-none tracking-[-0.05em] tabular-nums">
+              {main}
+            </p>
+          )}
           <p suppressHydrationWarning className="mt-2 max-w-[170px] truncate text-[9px] font-bold uppercase tracking-[0.16em]" style={{ color }}>
             {eyebrow}
           </p>
@@ -236,12 +261,27 @@ function PomodoroContent({ items }: { items: ItemOption[] }) {
     setItemId,
     description,
     setDescription,
+    setCustomMinutes,
     start,
     toggle,
     reset,
     skip,
     isPro,
   } = usePomodoro();
+
+  const [editingTime, setEditingTime] = React.useState(false);
+  const [draftMinutes, setDraftMinutes] = React.useState("25");
+
+  const beginEditTime = () => {
+    setDraftMinutes(String(Math.max(1, Math.round(totalMs / 60_000))));
+    setEditingTime(true);
+  };
+
+  const commitTime = () => {
+    const value = Number(draftMinutes);
+    if (Number.isFinite(value) && value >= 1) setCustomMinutes(value);
+    setEditingTime(false);
+  };
 
   if (!isPro) {
     return (
@@ -266,6 +306,35 @@ function PomodoroContent({ items }: { items: ItemOption[] }) {
         detail={status === "running" ? "In progress" : status === "paused" ? "Paused" : `${completed} rounds today`}
         status={status === "running" ? "Focus" : status === "paused" ? "Paused" : "Ready"}
         statusTone={status === "running" ? "success" : status === "paused" ? "warning" : "muted"}
+        onEditMain={beginEditTime}
+        editing={editingTime}
+        editor={
+          <div className="flex flex-col items-center">
+            <div className="flex items-end justify-center gap-1.5">
+              <input
+                autoFocus
+                type="number"
+                min={1}
+                max={180}
+                value={draftMinutes}
+                onChange={(event) => setDraftMinutes(event.target.value)}
+                onFocus={(event) => event.currentTarget.select()}
+                onBlur={commitTime}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") commitTime();
+                  if (event.key === "Escape") setEditingTime(false);
+                }}
+                className="w-[118px] appearance-none border-b-2 bg-transparent text-center font-mono text-[44px] font-extrabold leading-none tracking-[-0.05em] tabular-nums outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                style={{ borderColor: color }}
+                aria-label="Custom pomodoro minutes"
+              />
+              <span className="pb-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-muted-2">min</span>
+            </div>
+            <p className="mt-1 text-[8px] font-semibold uppercase tracking-[0.12em] text-muted-2">
+              Enter to set · Esc to cancel
+            </p>
+          </div>
+        }
       />
 
       <div className="w-full max-w-sm space-y-3">
@@ -306,10 +375,19 @@ function PomodoroContent({ items }: { items: ItemOption[] }) {
   );
 }
 
-export function TimerStudio({ items, initialMode = "timer" }: { items: ItemOption[]; initialMode?: Mode }) {
-  const [mode, setMode] = React.useState<Mode>(initialMode);
+export function TimerStudio({ items, initialMode }: { items: ItemOption[]; initialMode?: Mode }) {
+  const [mode, setMode] = React.useState<Mode>(initialMode ?? "timer");
   const timer = useTimer();
   const pomodoro = usePomodoro();
+  const autoSwitched = React.useRef(false);
+
+  React.useEffect(() => {
+    // An explicit ?mode= wins. Otherwise, if a pomodoro is already running (or
+    // gets started) open its view so the page reflects what is actually active.
+    if (initialMode || autoSwitched.current || pomodoro.status === "idle") return;
+    autoSwitched.current = true;
+    setMode("pomodoro");
+  }, [initialMode, pomodoro.status]);
   const isPomodoro = mode === "pomodoro";
   const color = isPomodoro
     ? phaseColor(pomodoro.phase)
