@@ -19,6 +19,8 @@ import {
   Trash2,
   Undo2,
   Archive,
+  ArrowDown,
+  ArrowUp,
   ArrowUpDown,
   MoveRight,
   X,
@@ -57,9 +59,9 @@ type SortMode = "name" | "custom" | "time" | "recent";
 
 const SORT_OPTIONS: Array<{ value: SortMode; label: string }> = [
   { value: "name", label: "Name" },
-  { value: "custom", label: "Custom order" },
+  { value: "custom", label: "Manual" },
   { value: "time", label: "Time tracked" },
-  { value: "recent", label: "Recently created" },
+  { value: "recent", label: "Recent" },
 ];
 
 function byName(a: WorkspaceItem, b: WorkspaceItem) {
@@ -236,11 +238,36 @@ export function WorkspaceTree({ items, weekLabel }: { items: WorkspaceItem[]; we
         toast.error(result.error);
         return;
       }
-      toast.success(parentId ? "Item moved" : "Item moved to the top level");
+      toast.success(anchor ? "Order updated" : parentId ? "Item moved" : "Item moved to the top level");
       setDragging(null);
       setDropTarget(null);
+      if (sortMode !== "custom") persistSort("custom");
       router.refresh();
     });
+  };
+
+  const siblingsOf = React.useCallback(
+    (parentId: string | null): Node[] => {
+      if (!parentId) return tree;
+      const find = (nodes: Node[]): Node | null => {
+        for (const candidate of nodes) {
+          if (candidate.id === parentId) return candidate;
+          const nested = find(candidate.children);
+          if (nested) return nested;
+        }
+        return null;
+      };
+      return find(tree)?.children ?? [];
+    },
+    [tree],
+  );
+
+  const nudge = (node: Node, direction: -1 | 1) => {
+    const siblings = siblingsOf(node.parentId);
+    const index = siblings.findIndex((sibling) => sibling.id === node.id);
+    const neighbour = siblings[index + direction];
+    if (!neighbour) return;
+    move(node.id, node.parentId, { id: neighbour.id, placement: direction === -1 ? "before" : "after" });
   };
 
   const maxSeconds = Math.max(1, ...activeItems.map((item) => item.seconds));
@@ -419,6 +446,10 @@ export function WorkspaceTree({ items, weekLabel }: { items: WorkspaceItem[]; we
     const itemDrop = dropTarget && typeof dropTarget === "object" ? dropTarget : null;
     const isDrop = itemDrop?.id === node.id && !cannotDrop;
     const dropMode = isDrop ? itemDrop.mode : null;
+    const siblings = siblingsOf(node.parentId);
+    const siblingIndex = siblings.findIndex((candidate) => candidate.id === node.id);
+    const canMoveUp = siblingIndex > 0;
+    const canMoveDown = siblingIndex >= 0 && siblingIndex < siblings.length - 1;
 
     return (
       <div key={node.id}>
@@ -503,9 +534,8 @@ export function WorkspaceTree({ items, weekLabel }: { items: WorkspaceItem[]; we
         <ContextMenu>
         <ContextMenuTrigger asChild>
         <div
-          draggable={sortMode === "custom"}
+          draggable
           onDragStart={(event) => {
-            if (sortMode !== "custom") return;
             setDragging(node.id);
             event.dataTransfer.effectAllowed = "move";
             event.dataTransfer.setData("text/plain", node.id);
@@ -520,14 +550,11 @@ export function WorkspaceTree({ items, weekLabel }: { items: WorkspaceItem[]; we
               return;
             }
             event.preventDefault();
-            if (!isCollapsed) {
-              setDropTarget({ id: node.id, mode: "inside" });
-              return;
-            }
             const rect = event.currentTarget.getBoundingClientRect();
+            const ratio = (event.clientY - rect.top) / rect.height;
             setDropTarget({
               id: node.id,
-              mode: event.clientY < rect.top + rect.height / 2 ? "before" : "after",
+              mode: ratio < 0.3 ? "before" : ratio > 0.7 ? "after" : "inside",
             });
           }}
           onDragLeave={() =>
@@ -536,16 +563,14 @@ export function WorkspaceTree({ items, weekLabel }: { items: WorkspaceItem[]; we
           onDrop={(event) => {
             event.preventDefault();
             if (!dragging || cannotDrop) return;
-            if (!isCollapsed) {
+            const rect = event.currentTarget.getBoundingClientRect();
+            const ratio = (event.clientY - rect.top) / rect.height;
+            const mode = ratio < 0.3 ? "before" : ratio > 0.7 ? "after" : "inside";
+            if (mode === "inside") {
               move(dragging, node.id);
               return;
             }
-            const rect = event.currentTarget.getBoundingClientRect();
-            const before = event.clientY < rect.top + rect.height / 2;
-            move(dragging, node.parentId, {
-              id: node.id,
-              placement: before ? "before" : "after",
-            });
+            move(dragging, node.parentId, { id: node.id, placement: mode });
           }}
           className={cn(
             "group relative grid grid-cols-[minmax(0,1fr)_84px_60px_72px_118px_104px] items-center gap-2 border-b border-border/70 px-3 py-2 transition-colors last:border-b-0",
@@ -666,6 +691,12 @@ export function WorkspaceTree({ items, weekLabel }: { items: WorkspaceItem[]; we
                 >
                   <MoveRight className="h-4 w-4" /> Move item
                 </DropdownMenuItem>
+                <DropdownMenuItem disabled={!canMoveUp} onSelect={() => nudge(node, -1)}>
+                  <ArrowUp className="h-4 w-4" /> Move up
+                </DropdownMenuItem>
+                <DropdownMenuItem disabled={!canMoveDown} onSelect={() => nudge(node, 1)}>
+                  <ArrowDown className="h-4 w-4" /> Move down
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem destructive onSelect={() => setToArchive(node)}>
                   <Archive className="h-4 w-4" /> Archive
@@ -718,6 +749,12 @@ export function WorkspaceTree({ items, weekLabel }: { items: WorkspaceItem[]; we
           >
             <MoveRight className="h-4 w-4" /> Move item
           </ContextMenuItem>
+          <ContextMenuItem disabled={!canMoveUp} onSelect={() => nudge(node, -1)}>
+            <ArrowUp className="h-4 w-4" /> Move up
+          </ContextMenuItem>
+          <ContextMenuItem disabled={!canMoveDown} onSelect={() => nudge(node, 1)}>
+            <ArrowDown className="h-4 w-4" /> Move down
+          </ContextMenuItem>
           <ContextMenuSeparator />
           <ContextMenuItem destructive onSelect={() => setToArchive(node)}>
             <Archive className="h-4 w-4" /> Archive
@@ -751,21 +788,27 @@ export function WorkspaceTree({ items, weekLabel }: { items: WorkspaceItem[]; we
               className="field pl-9"
             />
           </div>
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1.5">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-1.5" role="group" aria-label="Sort projects">
               <ArrowUpDown className="h-3.5 w-3.5 text-muted-2" />
-              <Select
-                value={sortMode}
-                onChange={(event) => persistSort(event.target.value as SortMode)}
-                aria-label="Sort projects"
-                className="h-8 w-[145px] py-0 text-[11px] font-semibold"
-              >
+              <div className="flex h-8 items-center gap-0.5 rounded-lg border border-border bg-surface-2/60 p-0.5">
                 {SORT_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => persistSort(option.value)}
+                    aria-pressed={sortMode === option.value}
+                    className={cn(
+                      "h-7 rounded-md px-2 text-[10px] font-bold transition-colors",
+                      sortMode === option.value
+                        ? "bg-primary text-primary-contrast"
+                        : "text-muted hover:bg-surface-3 hover:text-text",
+                    )}
+                  >
                     {option.label}
-                  </option>
+                  </button>
                 ))}
-              </Select>
+              </div>
             </div>
             <Button variant="outline" size="sm" onClick={() => persistCollapsed(new Set())}>
               Expand all
@@ -806,7 +849,6 @@ export function WorkspaceTree({ items, weekLabel }: { items: WorkspaceItem[]; we
           </div>
         ) : (
           <>
-            {sortMode === "custom" ? (
             <div
               onDragOver={(event) => {
                 if (!dragging) return;
@@ -819,17 +861,16 @@ export function WorkspaceTree({ items, weekLabel }: { items: WorkspaceItem[]; we
                 if (dragging) move(dragging, null);
               }}
               className={cn(
-                "mx-2 mt-2 flex h-8 items-center justify-center rounded-lg border border-dashed text-[10px] font-semibold uppercase tracking-[0.14em] transition-colors",
+                "mx-2 mt-2 h-8 items-center justify-center rounded-lg border border-dashed text-[10px] font-semibold uppercase tracking-[0.14em] transition-colors",
                 dragging
                   ? dropTarget === "root"
-                    ? "border-primary bg-primary-soft text-primary"
-                    : "border-border-strong text-muted-2"
-                  : "border-transparent text-transparent",
+                    ? "flex border-primary bg-primary-soft text-primary"
+                    : "flex border-border-strong text-muted-2"
+                  : "hidden",
               )}
             >
               {dragging ? "Drop here to move to the top level" : "—"}
             </div>
-            ) : null}
             <div className="scroll-thin overflow-x-auto">
               <div className="min-w-[820px]">
                 <div className="grid grid-cols-[minmax(0,1fr)_84px_60px_72px_118px_104px] items-center gap-2 border-b border-border bg-surface-2/50 px-3 py-2 text-[9px] font-bold uppercase tracking-[0.14em] text-muted-2">
@@ -852,7 +893,7 @@ export function WorkspaceTree({ items, weekLabel }: { items: WorkspaceItem[]; we
         <div className="border-t border-border px-4 py-3 text-[10px] font-medium text-muted-2">
           {sortMode === "custom"
             ? "Drag between items to reorder. Drop onto an expanded item to nest inside it."
-            : `Sorted by ${SORT_OPTIONS.find((option) => option.value === sortMode)?.label.toLowerCase() ?? "name"}. Switch to Custom order to drag projects.`}{" "}
+            : `Sorted by ${SORT_OPTIONS.find((option) => option.value === sortMode)?.label.toLowerCase() ?? "name"}. Drag any row to rearrange — the list then switches to manual order.`}{" "}
           Times show {weekLabel.toLowerCase()} totals, including descendants.
         </div>
       </div>
