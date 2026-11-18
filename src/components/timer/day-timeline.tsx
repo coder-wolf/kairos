@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { deleteSession, updateSession } from "@/app/actions/sessions";
 import { useQuickActions } from "@/components/quick-actions";
+import { nowScrollTop, useScrollToNow } from "@/components/timer/use-scroll-to-now";
 import { ConfirmDialog } from "@/components/dialogs/confirm-dialog";
 import {
   ContextMenu,
@@ -117,11 +118,7 @@ export function DayTimeline({
     return () => window.clearInterval(id);
   }, []);
 
-  React.useEffect(() => {
-    if (!scrollRef.current) return;
-    const hour = Number(formatInTimeZone(new Date(), timezone, "H"));
-    scrollRef.current.scrollTop = Math.max(0, hour * ROW_HEIGHT - 160);
-  }, [timezone]);
+  useScrollToNow(scrollRef, timezone, ROW_HEIGHT);
 
   const nowMinutes = React.useMemo(() => {
     const hour = Number(formatInTimeZone(new Date(now), timezone, "H"));
@@ -317,12 +314,12 @@ export function DayTimeline({
         </div>
         <button
           type="button"
-          onClick={() =>
-            scrollRef.current?.scrollTo({
-              top: Math.max(0, (nowMinutes / 60) * ROW_HEIGHT - 160),
-              behavior: "smooth",
-            })
-          }
+          onClick={() => {
+            const node = scrollRef.current;
+            if (node) {
+              node.scrollTo({ top: nowScrollTop(node, nowMinutes, ROW_HEIGHT), behavior: "smooth" });
+            }
+          }}
           className="inline-flex h-7 items-center gap-1 rounded-full border border-border bg-surface px-2.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-muted transition-colors hover:border-primary/30 hover:bg-primary-soft hover:text-primary"
         >
           <LocateFixed className="h-3 w-3" /> Now

@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { deleteSession, updateSession } from "@/app/actions/sessions";
 import Link from "next/link";
 import { useQuickActions } from "@/components/quick-actions";
+import { nowScrollTop, useScrollToNow } from "@/components/timer/use-scroll-to-now";
 import { ConfirmDialog } from "@/components/dialogs/confirm-dialog";
 import {
   ContextMenu,
@@ -156,11 +157,7 @@ export function WeekCalendar({
     return () => window.clearInterval(id);
   }, []);
 
-  React.useEffect(() => {
-    if (!scrollRef.current) return;
-    const hour = Number(formatInTimeZone(new Date(), timezone, "H"));
-    scrollRef.current.scrollTop = Math.max(0, hour * ROW_HEIGHT - 160);
-  }, [timezone]);
+  useScrollToNow(scrollRef, timezone, ROW_HEIGHT);
 
   const byDay = React.useMemo(() => {
     const map = new Map<string, Segment[]>();
@@ -418,12 +415,12 @@ export function WeekCalendar({
           </span>
           <button
             type="button"
-            onClick={() =>
-              scrollRef.current?.scrollTo({
-                top: Math.max(0, (nowMinutes / 60) * ROW_HEIGHT - 160),
-                behavior: "smooth",
-              })
-            }
+            onClick={() => {
+              const node = scrollRef.current;
+              if (node) {
+                node.scrollTo({ top: nowScrollTop(node, nowMinutes, ROW_HEIGHT), behavior: "smooth" });
+              }
+            }}
             className="inline-flex h-7 items-center gap-1 rounded-full border border-border bg-surface px-2.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-muted transition-colors hover:border-primary/30 hover:bg-primary-soft hover:text-primary"
           >
             <LocateFixed className="h-3 w-3" /> Now
@@ -435,9 +432,9 @@ export function WeekCalendar({
         <span>Drag to add · drag a block to move · right-click for options</span>
       </div>
 
-      <div className="scroll-thin min-h-0 flex-1 overflow-x-auto">
-        <div className="min-w-[760px]">
-          <div ref={scrollRef} className="scroll-thin h-full overflow-y-auto">
+      <div className="scroll-thin min-h-0 flex-1 overflow-x-auto overflow-y-hidden">
+        <div className="flex h-full min-w-[760px] flex-col">
+          <div ref={scrollRef} className="scroll-thin min-h-0 flex-1 overflow-y-auto">
             <div className="sticky top-0 z-30 flex border-b border-border bg-surface/95 backdrop-blur">
               <div className="shrink-0" style={{ width: GUTTER_WIDTH }} />
               {days.map((day) => (
