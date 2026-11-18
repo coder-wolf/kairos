@@ -7,6 +7,8 @@ import {
   Check,
   ChevronDown,
   ChevronRight,
+  ChevronsDown,
+  ChevronsUp,
   ClockPlus,
   FolderPlus,
   MoreHorizontal,
@@ -154,6 +156,12 @@ export function WorkspaceTree({ items, weekLabel }: { items: WorkspaceItem[]; we
       // ignore
     }
   }, []);
+
+  const parentIds = React.useMemo(
+    () => items.filter((item) => items.some((candidate) => candidate.parentId === item.id)).map((item) => item.id),
+    [items],
+  );
+  const allExpanded = parentIds.length > 0 && parentIds.every((id) => !collapsed.has(id));
 
   const persistCollapsed = (next: Set<string>) => {
     setCollapsed(next);
@@ -810,23 +818,15 @@ export function WorkspaceTree({ items, weekLabel }: { items: WorkspaceItem[]; we
                 ))}
               </div>
             </div>
-            <Button variant="outline" size="sm" onClick={() => persistCollapsed(new Set())}>
-              Expand all
-            </Button>
             <Button
               variant="outline"
               size="sm"
-              onClick={() =>
-                persistCollapsed(
-                  new Set(
-                    items
-                      .filter((item) => items.some((candidate) => candidate.parentId === item.id))
-                      .map((item) => item.id),
-                  ),
-                )
-              }
+              className="gap-1.5"
+              disabled={parentIds.length === 0}
+              onClick={() => persistCollapsed(allExpanded ? new Set(parentIds) : new Set())}
             >
-              Collapse
+              {allExpanded ? <ChevronsUp className="h-3.5 w-3.5" /> : <ChevronsDown className="h-3.5 w-3.5" />}
+              {allExpanded ? "Collapse all" : "Expand all"}
             </Button>
             <Button size="sm" onClick={() => openNewItem()} className="gap-1.5">
               <FolderPlus className="h-3.5 w-3.5" /> New Project

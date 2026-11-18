@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRight, ChevronRight, ChevronsDown, ClockPlus, Play, Target } from "lucide-react";
+import { ArrowRight, ChevronRight, ChevronsDown, ChevronsUp, ClockPlus, Play, Target } from "lucide-react";
 import { useQuickActions } from "@/components/quick-actions";
 import {
   ContextMenu,
@@ -98,8 +98,14 @@ export function DashboardAreas({ nodes }: { nodes: AreaNode[] }) {
     });
   };
 
-  const expandAll = () => {
-    setExpanded(new Set(nodes.filter((node) => nodes.some((child) => child.parentId === node.id)).map((node) => node.id)));
+  const parentIds = React.useMemo(
+    () => nodes.filter((node) => nodes.some((child) => child.parentId === node.id)).map((node) => node.id),
+    [nodes],
+  );
+  const allExpanded = parentIds.length > 0 && parentIds.every((id) => expanded.has(id));
+
+  const toggleExpandAll = () => {
+    setExpanded(allExpanded ? new Set() : new Set(parentIds));
   };
 
   const toggle = (id: string) => {
@@ -294,10 +300,13 @@ export function DashboardAreas({ nodes }: { nodes: AreaNode[] }) {
           <span className="hidden text-[9px] font-medium text-muted-2 sm:inline">Drag to reorder</span>
           <button
             type="button"
-            onClick={expandAll}
-            className="inline-flex h-6 items-center gap-1 rounded-md border border-border bg-surface px-2 text-[9px] font-bold uppercase tracking-[0.1em] text-muted transition-colors hover:bg-surface-2 hover:text-text"
+            onClick={toggleExpandAll}
+            disabled={parentIds.length === 0}
+            aria-pressed={allExpanded}
+            className="inline-flex h-6 items-center gap-1 rounded-md border border-border bg-surface px-2 text-[9px] font-bold uppercase tracking-[0.1em] text-muted transition-colors hover:bg-surface-2 hover:text-text disabled:opacity-40"
           >
-            <ChevronsDown className="h-3 w-3" /> Expand all
+            {allExpanded ? <ChevronsUp className="h-3 w-3" /> : <ChevronsDown className="h-3 w-3" />}
+            {allExpanded ? "Collapse all" : "Expand all"}
           </button>
         </div>
       </div>
