@@ -1,6 +1,11 @@
 import type { Metadata } from "next";
-import Image from "next/image";
+import Image, { type StaticImageData } from "next/image";
 import Link from "next/link";
+import analyticsShot from "../../docs/screenshots/analytics.png";
+import calendarShot from "../../docs/screenshots/calendar.png";
+import dashboardShot from "../../docs/screenshots/dashboard.png";
+import goalsShot from "../../docs/screenshots/goals.png";
+import timerShot from "../../docs/screenshots/timer.png";
 import {
   ArrowRight,
   BarChart3,
@@ -228,7 +233,7 @@ function Screenshot({
   priority = false,
   className,
 }: {
-  src: string;
+  src: StaticImageData;
   alt: string;
   priority?: boolean;
   className?: string;
@@ -241,9 +246,8 @@ function Screenshot({
       <Image
         src={src}
         alt={alt}
-        width={1270}
-        height={760}
         priority={priority}
+        placeholder="blur"
         sizes="(min-width: 1024px) 900px, 100vw"
         className="h-auto w-full"
       />
@@ -371,7 +375,7 @@ export default function HomePage() {
                 style={{ background: "radial-gradient(ellipse at 50% 0%, color-mix(in srgb, var(--primary) 28%, transparent), transparent 65%)" }}
               />
               <Screenshot
-                src="/press/dashboard.png"
+                src={dashboardShot}
                 alt="Kairos home dashboard showing projects, weekly time tracked, and a greeting"
                 priority
                 className="relative mx-auto max-w-5xl"
@@ -448,14 +452,14 @@ export default function HomePage() {
                 Start your first timer <ArrowRight className="h-3.5 w-3.5" />
               </Link>
             </div>
-            <Screenshot src="/press/timer.png" alt="Kairos timer with a running session, project selector, and session details" />
+            <Screenshot src={timerShot} alt="Kairos timer with a running session, project selector, and session details" />
           </div>
         </section>
 
         <section className="border-y border-border/60 bg-surface/30 py-20 md:py-28" aria-labelledby="calendar-heading">
           <div className="mx-auto grid w-full max-w-6xl items-center gap-10 px-5 md:px-8 lg:grid-cols-2 lg:gap-16">
             <Screenshot
-              src="/press/calendar.png"
+              src={calendarShot}
               alt="Kairos week calendar with color-coded time blocks across Monday to Sunday"
               className="order-2 lg:order-1"
             />
@@ -496,8 +500,8 @@ export default function HomePage() {
               </p>
             </div>
             <div className="mt-10 grid gap-4 lg:grid-cols-2">
-              <Screenshot src="/press/analytics.png" alt="Kairos analytics with tracked hours, daily average, active days, and a time trend chart" />
-              <Screenshot src="/press/goals.png" alt="Kairos goals spreadsheet with daily targets, streaks, and progress" />
+              <Screenshot src={analyticsShot} alt="Kairos analytics with tracked hours, daily average, active days, and a time trend chart" />
+              <Screenshot src={goalsShot} alt="Kairos goals spreadsheet with daily targets, streaks, and progress" />
             </div>
           </div>
         </section>
