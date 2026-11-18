@@ -197,7 +197,11 @@ export function PomodoroProvider({
             restored.totalMs = phaseDurationMs(restored.phase, mergedSettings);
           }
           setRun(restored);
-          completionRef.current = saved.run.phaseId ?? null;
+          // If the phase ended while the app was closed, leave the completion
+          // marker empty so the catch-up effect can log it and move on.
+          const overdue =
+            restored.status === "running" && restored.endsAt !== null && restored.endsAt <= Date.now();
+          completionRef.current = overdue ? null : (saved.run.phaseId ?? null);
         }
         if (saved.day === todayKey) {
           if (typeof saved.completed === "number") setCompleted(saved.completed);
@@ -224,10 +228,55 @@ export function PomodoroProvider({
   }, [hydrated, todayKey, settings, run, completed, focusSeconds]);
 
   React.useEffect(() => {
+    // After a refresh the server counts include logged pomodoros, including
+    // ones saved from another tab. Only ever move forward.
+    /* eslint-disable react-hooks/set-state-in-effect -- adopting server-backed totals */
+    setCompleted((value) => Math.max(value, initialCompleted));
+    setFocusSeconds((value) => Math.max(value, initialFocusSeconds));
+    /* eslint-enable react-hooks/set-state-in-effect */
+  }, [initialCompleted, initialFocusSeconds]);
+
+  React.useEffect(() => {
+    const catchUp = () => setNow(Date.now());
+    document.addEventListener("visibilitychange", catchUp);
+    window.addEventListener("focus", catchUp);
+    return () => {
+      document.removeEventListener("visibilitychange", catchUp);
+      window.removeEventListener("focus", catchUp);
+    };
+  }, []);
+
+  React.useEffect(() => {
     if (!hydrated || run.status !== "running" || !run.endsAt) return;
     const interval = window.setInterval(() => setNow(Date.now()), 250);
     return () => window.clearInterval(interval);
   }, [hydrated, run.status, run.endsAt]);
+
+  React.useEffect(() => {
+    if (!hydrated) return;
+    const onStorage = (event: StorageEvent) => {
+      if (event.key !== STORAGE_KEY || !event.newValue) return;
+      try {
+        const saved = JSON.parse(event.newValue) as {
+          day?: string;
+          settings?: PomodoroSettings;
+          run?: PomodoroRun;
+          completed?: number;
+          focusSeconds?: number;
+        };
+        if (saved.settings) setSettings((value) => ({ ...value, ...saved.settings }));
+        if (saved.run) setRun({ ...IDLE_RUN, ...saved.run });
+        if (saved.day === todayKey) {
+          if (typeof saved.completed === "number") setCompleted((value) => Math.max(value, saved.completed!));
+          if (typeof saved.focusSeconds === "number") setFocusSeconds((value) => Math.max(value, saved.focusSeconds!));
+        }
+      } catch {
+        // Ignore malformed writes from older versions.
+      }
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, [hydrated, todayKey]);
 
   React.useEffect(() => {
     if (!hydrated || run.status !== "running" || !run.endsAt) return;
@@ -296,7 +345,6 @@ export function PomodoroProvider({
       }
     } else {
       const focusMs = phaseDurationMs("focus", currentSettings);
-      if (currentSettings.sound) playChime();
       if (currentSettings.autoStartFocus) {
         setRun({
           ...current,
@@ -435,20 +483,46 @@ export function PomodoroProvider({
 
   const reset = React.useCallback(() => {
     const current = runRef.current;
-    const duration = phaseDurationMs(current.phase, settingsRef.current);
+    const currentSettings = settingsRef.current;
+    const nowMs = Date.now();
+    const focusDuration = phaseDurationMs("focus", currentSettings);
     completionRef.current = null;
+
+    if (current.phase === "focus" && current.phaseStartedAt) {
+      const active = current.activeMs + (current.segmentStartedAt ? nowMs - current.segmentStartedAt : 0);
+      const seconds = Math.round(active / 1000);
+      if (seconds >= 30) {
+        createPomodoroSession({
+          itemId: current.itemId,
+          startTime: new Date(nowMs - active).toISOString(),
+          endTime: new Date(nowMs).toISOString(),
+          description: current.description.trim() || "Pomodoro focus (ended early)",
+        })
+          .then((result) => {
+            if (!result.ok) {
+              toast.error(result.error);
+              return;
+            }
+            setFocusSeconds((value) => value + seconds);
+            router.refresh();
+          })
+          .catch(() => toast.error("Could not save the focus block."));
+      }
+    }
+
     setRun({
       ...current,
+      phase: "focus",
       status: "idle",
       endsAt: null,
-      remainingMs: duration,
-      totalMs: duration,
+      remainingMs: focusDuration,
+      totalMs: focusDuration,
       activeMs: 0,
       segmentStartedAt: null,
       phaseStartedAt: null,
       phaseId: null,
     });
-  }, []);
+  }, [router]);
 
   const skip = React.useCallback(() => {
     const current = runRef.current;

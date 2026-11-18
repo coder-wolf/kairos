@@ -155,6 +155,19 @@ export async function createPomodoroSession(input: {
     return { ok: false, error: "Focus blocks are limited to four hours." };
   }
 
+  // Two tabs can finish the same phase at once; keep the log idempotent.
+  const duplicate = await db.timeSession.findFirst({
+    where: {
+      workspaceId: workspace.id,
+      source: "POMODORO",
+      itemId: item.id,
+      startTime,
+      endTime,
+    },
+    select: { id: true },
+  });
+  if (duplicate) return { ok: true, id: duplicate.id };
+
   const session = await db.timeSession.create({
     data: {
       userId: user.id,
