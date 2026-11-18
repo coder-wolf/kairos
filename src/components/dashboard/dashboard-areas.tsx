@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRight, ChevronRight, ChevronsDown, ChevronsUp, ClockPlus, Play, Target } from "lucide-react";
+import { ArrowRight, ArrowUpDown, ChevronRight, ChevronsDown, ChevronsUp, ClockPlus, Play, Target } from "lucide-react";
 import { useQuickActions } from "@/components/quick-actions";
 import {
   ContextMenu,
@@ -273,7 +273,11 @@ export function DashboardAreas({ nodes }: { nodes: AreaNode[] }) {
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/60 px-4 py-2">
-        <div className="flex items-center gap-0.5 rounded-lg border border-border bg-surface-2/60 p-0.5" role="group" aria-label="Sort areas">
+        <div className="flex items-center gap-1.5">
+          <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-[0.1em] text-muted-2">
+            <ArrowUpDown className="h-3 w-3" /> Sort
+          </span>
+          <div className="flex items-center gap-0.5 rounded-lg border border-border bg-surface-2/60 p-0.5" role="group" aria-label="Sort areas">
           {(
             [
               { value: "name", label: "Name" },
@@ -295,6 +299,7 @@ export function DashboardAreas({ nodes }: { nodes: AreaNode[] }) {
               {option.label}
             </button>
           ))}
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <span className="hidden text-[9px] font-medium text-muted-2 sm:inline">Drag to reorder</span>
