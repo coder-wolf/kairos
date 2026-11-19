@@ -120,7 +120,9 @@ export default async function SettingsPage() {
               </div>
               <div className="flex items-center justify-between px-5 py-3">
                 <dt className="text-muted">Week starts</dt>
-                <dd className="font-semibold">{user.weekStartsOn === 1 ? "Monday" : "Sunday"}</dd>
+                <dd className="font-semibold">
+                  {user.weekStartsOn === 1 ? "Monday" : user.weekStartsOn === 6 ? "Saturday" : "Sunday"}
+                </dd>
               </div>
               <div className="flex items-center justify-between px-5 py-3">
                 <dt className="text-muted">Member since</dt>

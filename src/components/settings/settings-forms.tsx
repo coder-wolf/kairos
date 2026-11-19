@@ -177,6 +177,7 @@ export function PreferencesForm({ user }: { user: UserSummary }) {
           <Select value={weekStartsOn} onChange={(event) => setWeekStartsOn(event.target.value)}>
             <option value="1">Monday</option>
             <option value="0">Sunday</option>
+            <option value="6">Saturday</option>
           </Select>
         </Field>
       </div>

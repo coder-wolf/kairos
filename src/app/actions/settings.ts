@@ -81,7 +81,7 @@ export async function updatePreferences(input: PreferencesInput): Promise<Action
     return { ok: false, error: "That timezone is not recognized." };
   }
 
-  if (![0, 1].includes(input.weekStartsOn)) {
+  if (![0, 1, 6].includes(input.weekStartsOn)) {
     return { ok: false, error: "Choose a valid week start." };
   }
   if (!["light", "dark", "system"].includes(input.theme)) {
