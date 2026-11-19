@@ -10,6 +10,7 @@ import {
   Cell,
   Pie,
   PieChart,
+  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -55,11 +56,15 @@ export function BarTrendChart({
   height = 220,
   color = "var(--primary)",
   showYAxis = true,
+  referenceY,
+  referenceLabel,
 }: {
   data: Array<{ label: string; seconds: number; shortLabel?: string }>;
   height?: number;
   color?: string;
   showYAxis?: boolean;
+  referenceY?: number;
+  referenceLabel?: string;
 }) {
   const maxSeconds = Math.max(0, ...data.map((point) => point.seconds));
   return (
@@ -91,6 +96,20 @@ export function BarTrendChart({
             labelStyle={{ fontWeight: 700, marginBottom: 2 }}
             formatter={(value) => [formatDuration(Number(value)), "Tracked"]}
           />
+          {referenceY && referenceY > 0 ? (
+            <ReferenceLine
+              y={referenceY}
+              stroke="var(--warning)"
+              strokeDasharray="4 4"
+              ifOverflow="extendDomain"
+              label={{
+                value: referenceLabel ?? "Target",
+                position: "insideTopRight",
+                fill: "var(--muted-2)",
+                fontSize: 9,
+              }}
+            />
+          ) : null}
           <Bar dataKey="seconds" fill={color} radius={0} maxBarSize={38} />
         </BarChart>
       </ResponsiveContainer>

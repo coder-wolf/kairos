@@ -125,7 +125,7 @@ export function GoalCard({
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-1.5">
               <Link
-                href={`/items/${goal.itemId}`}
+                href={`/goals/${goal.id}`}
                 className="truncate text-[13px] font-bold tracking-tight hover:text-primary"
               >
                 {goal.name}

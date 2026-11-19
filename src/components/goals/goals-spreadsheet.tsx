@@ -353,7 +353,7 @@ export function GoalsSpreadsheet({
                             <Target className="h-3.5 w-3.5" />
                           </span>
                           <div className="min-w-0 flex-1">
-                            <Link href={`/items/${row.goal.itemId}`} className="block truncate text-[12px] font-bold hover:text-primary">
+                            <Link href={`/goals/${row.goal.id}`} className="block truncate text-[12px] font-bold hover:text-primary">
                               {row.goal.name}
                             </Link>
                             <p className="truncate text-[9px] text-muted">{row.itemPath}</p>
