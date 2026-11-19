@@ -107,7 +107,8 @@ export default async function GoalDetailPage({ params }: { params: Promise<{ id:
   const progress = computeGoalProgress(goal, items, sessions, tz, user.weekStartsOn, now);
   const streak = computeStreaks(goal, items, sessions, tz, user.weekStartsOn, now);
   const dailyTotals = dailyTotalsForGoal(goal, items, sessions, tz);
-  const habitDays = computeHabitDays(goal, items, sessions, tz, user.weekStartsOn, now, 30);
+  const recentDays = computeHabitDays(goal, items, sessions, tz, user.weekStartsOn, now, 30);
+  const heatDays = computeHabitDays(goal, items, sessions, tz, user.weekStartsOn, now, 90);
   const meta = GOAL_STATUS_META[progress.status];
   const color = goal.item?.color ?? "var(--primary)";
 
@@ -121,7 +122,7 @@ export default async function GoalDetailPage({ params }: { params: Promise<{ id:
     }
     return total;
   })();
-  const activeDays = habitDays.filter((day) => !day.inactive && day.percent > 0).length;
+  const activeDays = recentDays.filter((day) => !day.inactive && day.percent > 0).length;
 
   const periods =
     goal.periodType === "CUSTOM" ? [] : goalPeriods(goal, tz, user.weekStartsOn, { now, count: 10 });
@@ -309,11 +310,11 @@ export default async function GoalDetailPage({ params }: { params: Promise<{ id:
               <Flame className="h-4 w-4 text-warning" />
               <h2 className="text-sm font-bold tracking-tight">Recent days</h2>
             </div>
-            <p className="mt-0.5 text-[11px] text-muted">Last 30 days · darker green means further past target</p>
+            <p className="mt-0.5 text-[11px] text-muted">Last 90 days · darker green means further past target</p>
           </div>
           <div className="p-5">
-            <div className="grid grid-cols-10 gap-1.5">
-              {habitDays.map((day) => (
+            <div className="grid grid-cols-10 gap-1.5 sm:grid-cols-[repeat(15,minmax(0,1fr))]">
+              {heatDays.map((day) => (
                 <span
                   key={day.dayKey}
                   title={`${day.label}${day.inactive ? " · outside goal" : ` · ${Math.round(day.percent)}%`}`}
@@ -323,7 +324,7 @@ export default async function GoalDetailPage({ params }: { params: Promise<{ id:
               ))}
             </div>
             <div className="mt-4 flex items-center justify-between text-[10px] text-muted-2">
-              <span>30 days ago</span>
+              <span>90 days ago</span>
               <span className="flex items-center gap-1">
                 <span className="h-2.5 w-2.5 rounded-[2px]" style={{ background: "color-mix(in srgb, var(--muted) 16%, var(--surface-2))" }} />
                 <span className="h-2.5 w-2.5 rounded-[2px]" style={{ background: "color-mix(in srgb, var(--muted) 46%, var(--surface-2))" }} />
