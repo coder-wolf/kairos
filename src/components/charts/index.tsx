@@ -5,6 +5,7 @@ import {
   AreaChart,
   Bar,
   BarChart,
+  LabelList,
   CartesianGrid,
   Cell,
   Pie,
@@ -36,8 +37,17 @@ function formatAxisDuration(value: number) {
   const seconds = Number(value);
   if (!Number.isFinite(seconds) || seconds <= 0) return "0";
   if (seconds < 3600) return `${Math.round(seconds / 60)}m`;
-  const hours = seconds / 3600;
-  return `${Number(hours.toFixed(hours >= 10 ? 0 : 1))}h`;
+  return `${Math.round(seconds / 3600)}h`;
+}
+
+/** Whole-hour axis ticks once a chart spans an hour or more. */
+function hourTicks(maxSeconds: number) {
+  if (maxSeconds < 3600) return undefined;
+  const maxHours = Math.max(1, Math.ceil(maxSeconds / 3600));
+  const step = Math.max(1, Math.ceil(maxHours / 4));
+  const ticks: number[] = [];
+  for (let hour = 0; hour <= maxHours; hour += step) ticks.push(hour * 3600);
+  return ticks;
 }
 
 export function BarTrendChart({
@@ -51,6 +61,7 @@ export function BarTrendChart({
   color?: string;
   showYAxis?: boolean;
 }) {
+  const maxSeconds = Math.max(0, ...data.map((point) => point.seconds));
   return (
     <div style={{ width: "100%", height }}>
       <ResponsiveContainer width="100%" height="100%">
@@ -70,6 +81,7 @@ export function BarTrendChart({
               axisLine={false}
               tick={axisStyle}
               tickFormatter={formatAxisDuration}
+              ticks={hourTicks(maxSeconds)}
               width={46}
             />
           ) : null}
@@ -79,7 +91,150 @@ export function BarTrendChart({
             labelStyle={{ fontWeight: 700, marginBottom: 2 }}
             formatter={(value) => [formatDuration(Number(value)), "Tracked"]}
           />
-          <Bar dataKey="seconds" fill={color} radius={[6, 6, 2, 2]} maxBarSize={38} />
+          <Bar dataKey="seconds" fill={color} radius={0} maxBarSize={38} />
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+export type StackedSeries = { id: string; name: string; color: string; total?: number };
+export type StackedPoint = {
+  label: string;
+  shortLabel?: string;
+  seconds: number;
+  segments: Record<string, number>;
+};
+
+function SegmentLabel(props: {
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
+  value?: number | string;
+  name?: string;
+}) {
+  const { x = 0, y = 0, width = 0, height = 0, name = "" } = props;
+  const value = Number(props.value ?? 0);
+  if (!name || value <= 0 || width < 8) return null;
+  const cx = x + width / 2;
+  const cy = y + height / 2;
+  const estimatedWidth = name.length * 5.3;
+  const horizontal = estimatedWidth <= width - 8 && height >= 14;
+  if (!horizontal && height < 42) return null;
+  const maxChars = Math.max(3, Math.floor((height - 10) / 5.4));
+  const label = horizontal || name.length <= maxChars ? name : `${name.slice(0, Math.max(1, maxChars - 1))}…`;
+  return (
+    <text
+      x={cx}
+      y={cy}
+      transform={horizontal ? undefined : `rotate(-90 ${cx} ${cy})`}
+      textAnchor="middle"
+      dominantBaseline="middle"
+      fill="rgba(255,255,255,0.94)"
+      stroke="rgba(8,8,18,0.4)"
+      strokeWidth={2.4}
+      paintOrder="stroke"
+      fontSize={9}
+      fontWeight={700}
+      style={{ pointerEvents: "none" }}
+    >
+      {label}
+    </text>
+  );
+}
+
+function StackedTooltip({
+  active,
+  payload,
+  series,
+}: {
+  active?: boolean;
+  payload?: Array<{ payload?: Record<string, unknown> }>;
+  series: StackedSeries[];
+}) {
+  if (!active || !payload?.length) return null;
+  const point = payload[0]?.payload;
+  if (!point) return null;
+  const total = Number(point.seconds ?? 0);
+  const rows = series.filter((entry) => Number(point[entry.id] ?? 0) > 0);
+  return (
+    <div style={tooltipStyle}>
+      <p style={{ fontWeight: 700, marginBottom: 4 }}>{String(point.label ?? "")}</p>
+      <p style={{ color: "var(--muted)", marginBottom: 6 }}>{formatDuration(total)} tracked</p>
+      <div style={{ display: "grid", gap: 3 }}>
+        {rows.map((entry) => (
+          <div key={entry.id} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ width: 8, height: 8, borderRadius: 2, background: entry.color, flexShrink: 0 }} />
+            <span style={{ flex: 1 }}>{entry.name}</span>
+            <span style={{ color: "var(--muted)", fontVariantNumeric: "tabular-nums" }}>
+              {formatDuration(Number(point[entry.id] ?? 0))}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export function StackedBarTrendChart({
+  data,
+  series,
+  height = 220,
+  showYAxis = true,
+}: {
+  data: StackedPoint[];
+  series: StackedSeries[];
+  height?: number;
+  showYAxis?: boolean;
+}) {
+  const maxSeconds = Math.max(0, ...data.map((point) => point.seconds));
+  const rows = data.map((point) => {
+    const row: Record<string, string | number> = {
+      label: point.label,
+      shortLabel: point.shortLabel ?? point.label,
+      seconds: point.seconds,
+    };
+    for (const entry of series) row[entry.id] = point.segments[entry.id] ?? 0;
+    return row;
+  });
+
+  return (
+    <div style={{ width: "100%", height }}>
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart data={rows} margin={{ top: 8, right: 4, bottom: 0, left: showYAxis ? -16 : 0 }}>
+          <CartesianGrid vertical={false} stroke="var(--border)" strokeDasharray="3 5" />
+          <XAxis
+            dataKey="shortLabel"
+            tickLine={false}
+            axisLine={false}
+            tick={axisStyle}
+            interval={0}
+            minTickGap={4}
+          />
+          {showYAxis ? (
+            <YAxis
+              tickLine={false}
+              axisLine={false}
+              tick={axisStyle}
+              tickFormatter={formatAxisDuration}
+              ticks={hourTicks(maxSeconds)}
+              width={46}
+            />
+          ) : null}
+          <Tooltip cursor={{ fill: "var(--surface-2)", radius: 6 }} content={<StackedTooltip series={series} />} />
+          {series.map((entry) => (
+            <Bar
+              key={entry.id}
+              dataKey={entry.id}
+              stackId="tracked"
+              fill={entry.color}
+              maxBarSize={38}
+              radius={0}
+            >
+              <LabelList dataKey={entry.id} content={<SegmentLabel name={entry.name} />} />
+            </Bar>
+          ))}
         </BarChart>
       </ResponsiveContainer>
     </div>
@@ -95,6 +250,7 @@ export function AreaTrendChart({
   height?: number;
   color?: string;
 }) {
+  const maxSeconds = Math.max(0, ...data.map((point) => point.seconds));
   return (
     <div style={{ width: "100%", height }}>
       <ResponsiveContainer width="100%" height="100%">
@@ -112,6 +268,7 @@ export function AreaTrendChart({
             axisLine={false}
             tick={axisStyle}
             tickFormatter={formatAxisDuration}
+            ticks={hourTicks(maxSeconds)}
             width={46}
           />
           <Tooltip

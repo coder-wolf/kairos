@@ -2,10 +2,10 @@
 
 import * as React from "react";
 import { Timer, TrendingUp } from "lucide-react";
-import { BarTrendChart } from "@/components/charts";
+import { StackedBarTrendChart, type StackedPoint, type StackedSeries } from "@/components/charts";
 import { cn, formatDuration } from "@/lib/utils";
 
-type Point = { label: string; shortLabel: string; seconds: number };
+type Point = StackedPoint;
 
 function Delta({ current, previous, period }: { current: number; previous: number; period: string }) {
   if (previous <= 0) {
@@ -23,6 +23,8 @@ function Delta({ current, previous, period }: { current: number; previous: numbe
 export function RhythmCard({
   weekTrend,
   monthTrend,
+  weekSeries,
+  monthSeries,
   weekTotal,
   monthTotal,
   previousWeekTotal,
@@ -32,6 +34,8 @@ export function RhythmCard({
 }: {
   weekTrend: Point[];
   monthTrend: Point[];
+  weekSeries: StackedSeries[];
+  monthSeries: StackedSeries[];
   weekTotal: number;
   monthTotal: number;
   previousWeekTotal: number;
@@ -42,6 +46,7 @@ export function RhythmCard({
   const [mode, setMode] = React.useState<"week" | "month">("week");
   const monthly = mode === "month";
   const trend = monthly ? monthTrend : weekTrend;
+  const series = monthly ? monthSeries : weekSeries;
   const total = monthly ? monthTotal : weekTotal;
 
   return (
@@ -89,7 +94,20 @@ export function RhythmCard({
       </div>
       <div className="px-2 pb-3 pt-5 sm:px-4">
         {total > 0 ? (
-          <BarTrendChart data={trend} height={220} />
+          <>
+            <StackedBarTrendChart data={trend} series={series} height={220} />
+            {series.length > 1 ? (
+              <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5 px-2 pb-1 text-[10px] font-medium">
+                {series.map((entry) => (
+                  <span key={entry.id} className="inline-flex items-center gap-1.5">
+                    <span className="h-2 w-2 shrink-0 rounded-[3px]" style={{ background: entry.color }} />
+                    <span className="text-muted">{entry.name}</span>
+                    <span className="tabular-nums text-muted-2">{formatDuration(entry.total ?? 0, { zero: "0m" })}</span>
+                  </span>
+                ))}
+              </div>
+            ) : null}
+          </>
         ) : (
           <div className="flex h-[220px] flex-col items-center justify-center text-center">
             <div className="grid h-11 w-11 place-items-center rounded-2xl bg-surface-2 text-muted">

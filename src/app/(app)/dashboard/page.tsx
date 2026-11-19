@@ -21,7 +21,7 @@ import { DashboardQuickActions } from "@/components/dashboard/dashboard-quick-ac
 import { RhythmCard } from "@/components/dashboard/rhythm-card";
 import { EmptyWorkspace } from "@/components/dashboard/empty-workspace";
 import { SessionTable } from "@/components/sessions/session-table";
-import { buildTrend, totalSeconds } from "@/lib/analytics";
+import { buildStackedSeries, totalSeconds } from "@/lib/analytics";
 import { getAppContext, toGoalSummaries, toSessionRows } from "@/lib/dal";
 import { aggregateByItem, getSubtreeIds } from "@/lib/items";
 import { computeGoalProgress, computeHabitDays, computeStreaks, goalItemIds, goalTouchesSubtree } from "@/lib/goals";
@@ -164,18 +164,80 @@ export default async function DashboardPage() {
     ["on_track", "completed", "exceeded"].includes(progress.status),
   ).length;
 
-  const weekTrend = buildTrend(sessions, week, tz, weekStartsOn).map((point) => ({
-    label: point.label,
-    shortLabel: point.shortLabel || point.label,
-    seconds: point.seconds,
-  }));
-  const monthTrend = buildTrend(sessions, month, tz, weekStartsOn).map((point) => {
+  const breakdownPalette = [
+    "var(--primary)",
+    "var(--accent)",
+    "var(--success)",
+    "var(--warning)",
+    "var(--info)",
+    "var(--danger)",
+  ];
+  const itemById = new Map(items.map((item) => [item.id, item] as const));
+  const topLevelItemId = (itemId: string) => {
+    let cursor = itemById.get(itemId);
+    let guard = 0;
+    while (cursor?.parentId && guard < 50) {
+      const parent = itemById.get(cursor.parentId);
+      if (!parent) break;
+      cursor = parent;
+      guard++;
+    }
+    return cursor?.id ?? itemId;
+  };
+  const buildBreakdown = (
+    range: typeof week,
+    shortLabelFor: (point: { key: string; label: string; shortLabel?: string }) => string,
+  ) => {
+    const stacked = buildStackedSeries(sessions, range, tz, topLevelItemId);
+    const totals = new Map<string, number>();
+    for (const point of stacked) {
+      for (const [key, value] of Object.entries(point)) {
+        if (key === "seconds" || typeof value !== "number") continue;
+        totals.set(key, (totals.get(key) ?? 0) + value);
+      }
+    }
+    const ranked = [...totals.entries()].filter(([, seconds]) => seconds > 0).sort((a, b) => b[1] - a[1]);
+    const visible = ranked.slice(0, 6);
+    const series = visible.map(([id, total], index) => {
+      const item = itemById.get(id);
+      return {
+        id,
+        name: item?.name ?? "Untitled",
+        color: item?.color ?? breakdownPalette[index % breakdownPalette.length],
+        total,
+      };
+    });
+    if (ranked.length > visible.length) {
+      series.push({
+        id: "__other__",
+        name: "Other",
+        color: "var(--muted)",
+        total: ranked.slice(visible.length).reduce((sum, [, seconds]) => sum + seconds, 0),
+      });
+    }
+    const allowed = new Set(series.map((entry) => entry.id));
+    const points = stacked.map((point) => {
+      const segments: Record<string, number> = {};
+      for (const entry of series) segments[entry.id] = 0;
+      for (const [key, value] of Object.entries(point)) {
+        if (key === "seconds" || typeof value !== "number") continue;
+        const id = allowed.has(key) ? key : "__other__";
+        segments[id] = (segments[id] ?? 0) + value;
+      }
+      return {
+        label: point.label,
+        shortLabel: shortLabelFor(point),
+        seconds: point.seconds,
+        segments,
+      };
+    });
+    return { points, series };
+  };
+
+  const weekBreakdown = buildBreakdown(week, (point) => point.shortLabel || point.label);
+  const monthBreakdown = buildBreakdown(month, (point) => {
     const day = Number(point.key.slice(8));
-    return {
-      label: point.label,
-      shortLabel: day === 1 || day % 5 === 0 ? String(day) : "",
-      seconds: point.seconds,
-    };
+    return day === 1 || day % 5 === 0 ? String(day) : "";
   });
 
   const totals = aggregateByItem(activeItems, weekSessions);
@@ -293,8 +355,10 @@ export default async function DashboardPage() {
 
             <div className="order-2 min-w-0 xl:order-none">
               <RhythmCard
-                weekTrend={weekTrend}
-                monthTrend={monthTrend}
+                weekTrend={weekBreakdown.points}
+                monthTrend={monthBreakdown.points}
+                weekSeries={weekBreakdown.series}
+                monthSeries={monthBreakdown.series}
                 weekTotal={weekSeconds}
                 monthTotal={monthSeconds}
                 previousWeekTotal={previousWeekSeconds}
