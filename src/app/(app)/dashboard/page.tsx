@@ -196,13 +196,16 @@ export default async function DashboardPage() {
         totals.set(key, (totals.get(key) ?? 0) + value);
       }
     }
-    const ranked = [...totals.entries()].filter(([, seconds]) => seconds > 0).sort((a, b) => b[1] - a[1]);
+    const isSystemGroup = (id: string) => itemById.get(id)?.isSystem === true;
+    const ranked = [...totals.entries()]
+      .filter(([, seconds]) => seconds > 0)
+      .sort((a, b) => Number(isSystemGroup(a[0])) - Number(isSystemGroup(b[0])) || b[1] - a[1]);
     const visible = ranked.slice(0, 6);
     const series = visible.map(([id, total], index) => {
       const item = itemById.get(id);
       return {
         id,
-        name: item?.name ?? "Untitled",
+        name: item ? (item.isSystem ? "No project" : item.name) : "Untitled",
         color: item?.color ?? breakdownPalette[index % breakdownPalette.length],
         total,
       };
