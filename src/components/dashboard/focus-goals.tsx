@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ChevronDown, ChevronUp, Flame, Play, Target } from "lucide-react";
 import { LiveTimer } from "@/components/timer/live-timer";
 import { useTimer } from "@/components/timer/timer-provider";
@@ -40,6 +41,7 @@ function periodUnit(type: string) {
 }
 
 export function FocusGoals({ items }: { items: FocusGoalItem[] }) {
+  const router = useRouter();
   const { start, timer } = useTimer();
   const [expanded, setExpanded] = React.useState(false);
   const visible = expanded ? items : items.slice(0, INITIAL_VISIBLE);
@@ -72,7 +74,14 @@ export function FocusGoals({ items }: { items: FocusGoalItem[] }) {
               const color = STATUS_COLOR[item.status] ?? "var(--primary)";
               const meta = GOAL_STATUS_META[item.status as keyof typeof GOAL_STATUS_META];
               return (
-                <tr key={item.goal.id} className="group border-b border-border/60 last:border-b-0 hover:bg-surface-2/40">
+                <tr
+                  key={item.goal.id}
+                  onClick={(event) => {
+                    if ((event.target as HTMLElement).closest("a, button")) return;
+                    router.push(`/goals/${item.goal.id}`);
+                  }}
+                  className="group cursor-pointer border-b border-border/60 last:border-b-0 hover:bg-surface-2/40"
+                >
                   <td className="px-2 py-2">
                     <div className="flex items-center gap-2">
                       <span
@@ -82,7 +91,7 @@ export function FocusGoals({ items }: { items: FocusGoalItem[] }) {
                         <Target className="h-3 w-3" />
                       </span>
                       <div className="min-w-0">
-                        <Link href={`/items/${item.goal.itemId}`} className="block max-w-[150px] truncate font-semibold hover:text-primary">
+                        <Link href={`/goals/${item.goal.id}`} className="block max-w-[150px] truncate font-semibold hover:text-primary">
                           {item.goal.name}
                         </Link>
                         <span className="block max-w-[160px] truncate text-[9px] text-muted-2">{item.goal.itemName}</span>

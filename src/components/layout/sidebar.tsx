@@ -102,13 +102,13 @@ export function SidebarContent({
 
   const workspace = [
     { href: "/dashboard", label: "Home", icon: House },
-    { href: "/workspace", label: "Projects", icon: Network, badge: itemCount },
-    { href: "/goals", label: "Goals & Habits", icon: Target, badge: activeGoalCount },
-  ];
-
-  const tracking = [
     { href: "/timer", label: "Timer", icon: Timer },
     { href: "/calendar", label: "Calendar", icon: CalendarRange },
+  ];
+
+  const plan = [
+    { href: "/workspace", label: "Projects", icon: Network, badge: itemCount },
+    { href: "/goals", label: "Goals & Habits", icon: Target, badge: activeGoalCount },
   ];
 
   const insights = [
@@ -247,9 +247,9 @@ export function SidebarContent({
         </div>
 
         <div>
-          <p className="mb-1.5 px-3 text-[10px] font-bold uppercase tracking-[0.16em] text-muted-2">Tracking</p>
+          <p className="mb-1.5 px-3 text-[10px] font-bold uppercase tracking-[0.16em] text-muted-2">Plan</p>
           <div className="space-y-0.5">
-            {tracking.map((entry) => (
+            {plan.map((entry) => (
               <SidebarNavLink key={entry.href} {...entry} pathname={pathname} onNavigate={onNavigate} />
             ))}
           </div>
