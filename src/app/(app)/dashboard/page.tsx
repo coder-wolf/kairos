@@ -173,22 +173,11 @@ export default async function DashboardPage() {
     "var(--danger)",
   ];
   const itemById = new Map(items.map((item) => [item.id, item] as const));
-  const topLevelItemId = (itemId: string) => {
-    let cursor = itemById.get(itemId);
-    let guard = 0;
-    while (cursor?.parentId && guard < 50) {
-      const parent = itemById.get(cursor.parentId);
-      if (!parent) break;
-      cursor = parent;
-      guard++;
-    }
-    return cursor?.id ?? itemId;
-  };
   const buildBreakdown = (
     range: typeof week,
     shortLabelFor: (point: { key: string; label: string; shortLabel?: string }) => string,
   ) => {
-    const stacked = buildStackedSeries(sessions, range, tz, topLevelItemId);
+    const stacked = buildStackedSeries(sessions, range, tz, (itemId) => itemId);
     const totals = new Map<string, number>();
     for (const point of stacked) {
       for (const [key, value] of Object.entries(point)) {
