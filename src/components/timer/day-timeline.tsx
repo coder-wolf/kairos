@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { deleteSession, updateSession } from "@/app/actions/sessions";
 import { useQuickActions } from "@/components/quick-actions";
+import { useTimer } from "@/components/timer/timer-provider";
 import { nowScrollTop, useScrollToNow } from "@/components/timer/use-scroll-to-now";
 import { ConfirmDialog } from "@/components/dialogs/confirm-dialog";
 import {
@@ -91,6 +92,26 @@ export function DayTimeline({
   fill?: boolean;
 }) {
   const { openManualTime } = useQuickActions();
+  const { timer, elapsed, openWindow } = useTimer();
+
+  const liveSession = React.useMemo<SessionRow | null>(() => {
+    if (!timer) return null;
+    const start = new Date(timer.startedAt);
+    const end = new Date(start.getTime() + elapsed * 1000);
+    if (end.getTime() <= start.getTime()) return null;
+    return {
+      id: `live-${timer.id}`,
+      itemId: timer.itemId,
+      itemName: timer.itemName,
+      itemColor: timer.itemColor,
+      itemPath: timer.itemName,
+      startTime: start.toISOString(),
+      endTime: end.toISOString(),
+      durationSeconds: Math.round(elapsed),
+      description: timer.description ?? null,
+      source: timer.source,
+    };
+  }, [timer, elapsed]);
   const router = useRouter();
   const scrollRef = React.useRef<HTMLDivElement>(null);
   const [now, setNow] = React.useState(() => Date.now());
@@ -138,10 +159,11 @@ export function DayTimeline({
   }, [now, timezone]);
 
   const segments = React.useMemo(() => {
+    const allSessions = liveSession ? [...sessions, liveSession] : sessions;
     const dayStart = startOfDayKey(todayKey, timezone);
     const dayEnd = endOfDayKey(todayKey, timezone);
     const raw: Omit<Segment, "lane" | "lanes">[] = [];
-    for (const session of sessions) {
+    for (const session of allSessions) {
       const start = new Date(session.startTime);
       const end = new Date(session.endTime);
       if (start >= dayEnd || end <= dayStart) continue;
@@ -153,7 +175,7 @@ export function DayTimeline({
       raw.push({ session, start: visibleStart, end: visibleEnd, startMin, endMin });
     }
     return layoutDay(raw);
-  }, [sessions, todayKey, timezone]);
+  }, [sessions, todayKey, timezone, liveSession]);
 
   const total = sessions.reduce((sum, session) => sum + session.durationSeconds, 0);
 
@@ -508,13 +530,23 @@ export function DayTimeline({
                   data-session-id={segment.session.id}
                   onClick={(event) => {
                     event.stopPropagation();
+                    if (segment.session.id.startsWith("live-")) {
+                      openWindow();
+                      return;
+                    }
                     if (suppressClick.current === segment.session.id) {
                       suppressClick.current = null;
                       return;
                     }
                     openManualTime({ itemId: segment.session.itemId, session: segment.session, timezone });
                   }}
-                  onPointerDown={(event) => startSessionDrag(event, segment.session, segment)}
+                  onPointerDown={(event) => {
+                    if (segment.session.id.startsWith("live-")) {
+                      event.stopPropagation();
+                      return;
+                    }
+                    startSessionDrag(event, segment.session, segment);
+                  }}
                   onPointerMove={moveSessionDrag}
                   onPointerUp={endSessionDrag}
                   onPointerCancel={() => {
@@ -525,6 +557,7 @@ export function DayTimeline({
                     "absolute z-10 cursor-grab touch-none overflow-hidden rounded-lg px-2 py-1 text-left transition-all duration-150 hover:z-20 hover:-translate-y-px hover:shadow-[0_5px_16px_-6px_rgba(15,15,25,0.35)] active:cursor-grabbing",
                     dragPreview?.sessionId === segment.session.id && "opacity-40",
                     resizePreview?.sessionId === segment.session.id && "opacity-30",
+                    segment.session.id.startsWith("live-") && "z-20 ring-1 ring-danger/50",
                   )}
                   style={{
                     top,
@@ -541,6 +574,9 @@ export function DayTimeline({
                     className="block truncate text-[11px] font-bold leading-tight"
                     style={{ color: `color-mix(in srgb, ${color} 72%, var(--text))` }}
                   >
+                    {segment.session.id.startsWith("live-") ? (
+                      <span className="mr-1 inline-block h-1.5 w-1.5 animate-pulse-soft rounded-full bg-danger align-middle" />
+                    ) : null}
                     {segment.session.itemName}
                   </span>
                   {height > 34 ? (
@@ -554,7 +590,7 @@ export function DayTimeline({
                       {segment.session.description}
                     </span>
                   ) : null}
-                  {height > 26 && !clippedTop ? (
+                  {height > 26 && !clippedTop && !segment.session.id.startsWith("live-") ? (
                     <span
                       aria-hidden
                       onPointerDown={(event) => startResize(event, segment.session, segment, "top")}
@@ -564,7 +600,7 @@ export function DayTimeline({
                       className="absolute inset-x-0 top-0 z-20 h-2 cursor-ns-resize touch-none rounded-t-lg transition-colors hover:bg-primary/35"
                     />
                   ) : null}
-                  {height > 26 && !clippedBottom ? (
+                  {height > 26 && !clippedBottom && !segment.session.id.startsWith("live-") ? (
                     <span
                       aria-hidden
                       onPointerDown={(event) => startResize(event, segment.session, segment, "bottom")}
