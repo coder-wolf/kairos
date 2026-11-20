@@ -133,6 +133,23 @@ export function WeekCalendar({
     endMin: number;
     sessionId: string;
   } | null>(null);
+  const [resizePreview, setResizePreview] = React.useState<{
+    dayKey: string;
+    startMin: number;
+    endMin: number;
+    sessionId: string;
+  } | null>(null);
+  const sessionResize = React.useRef<{
+    session: SessionRow;
+    dayKey: string;
+    edge: "top" | "bottom";
+    startMin: number;
+    endMin: number;
+    dayElement: HTMLElement;
+    element: HTMLElement;
+    moved: boolean;
+    preview: { startMin: number; endMin: number } | null;
+  } | null>(null);
   const sessionDrag = React.useRef<{
     session: SessionRow;
     dayKey: string;
@@ -212,8 +229,10 @@ export function WeekCalendar({
     return Math.max(0, Math.min(23 * 60 + 45, Math.round(rawMinutes / 15) * 15));
   };
 
-  const timeLabel = (minutes: number) =>
-    `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
+  const timeLabel = (minutes: number) => {
+    const rounded = Math.max(0, Math.round(minutes));
+    return `${String(Math.floor(rounded / 60)).padStart(2, "0")}:${String(rounded % 60).padStart(2, "0")}`;
+  };
 
   const beginSelection = (dayKey: string, event: React.PointerEvent<HTMLDivElement>) => {
     if (event.button !== 0) return;
@@ -341,6 +360,90 @@ export function WeekCalendar({
       return;
     }
     router.refresh();
+  };
+
+  const startResize = (
+    event: React.PointerEvent<HTMLSpanElement>,
+    session: SessionRow,
+    segment: Segment,
+    dayKey: string,
+    edge: "top" | "bottom",
+  ) => {
+    if (event.button !== 0) return;
+    event.stopPropagation();
+    event.preventDefault();
+    const dayElement = (event.currentTarget as HTMLElement).closest("[data-day-key]") as HTMLElement | null;
+    if (!dayElement) return;
+    const element = event.currentTarget as HTMLElement;
+    element.setPointerCapture(event.pointerId);
+    suppressClick.current = session.id;
+    window.setTimeout(() => {
+      if (suppressClick.current === session.id) suppressClick.current = null;
+    }, 600);
+    sessionResize.current = {
+      session,
+      dayKey,
+      edge,
+      startMin: Math.round(segment.startMin),
+      endMin: Math.round(segment.endMin),
+      dayElement,
+      element,
+      moved: false,
+      preview: null,
+    };
+    setResizePreview({
+      dayKey,
+      startMin: segment.startMin,
+      endMin: segment.endMin,
+      sessionId: session.id,
+    });
+  };
+
+  const moveResize = (event: React.PointerEvent<HTMLSpanElement>) => {
+    const resize = sessionResize.current;
+    if (!resize) return;
+    const minute = snapMinutes(event.clientY, resize.dayElement);
+    let startMin = resize.startMin;
+    let endMin = resize.endMin;
+    if (resize.edge === "top") {
+      startMin = Math.max(0, Math.min(minute, resize.endMin - 15));
+    } else {
+      endMin = Math.min(1440, Math.max(minute, resize.startMin + 15));
+    }
+    resize.moved = startMin !== resize.startMin || endMin !== resize.endMin;
+    resize.preview = { startMin, endMin };
+    setResizePreview({ dayKey: resize.dayKey, startMin, endMin, sessionId: resize.session.id });
+  };
+
+  const endResize = async (event: React.PointerEvent<HTMLSpanElement>) => {
+    const resize = sessionResize.current;
+    if (!resize) return;
+    sessionResize.current = null;
+    if (resize.element.hasPointerCapture(event.pointerId)) {
+      resize.element.releasePointerCapture(event.pointerId);
+    }
+    const preview = resize.preview;
+    setResizePreview(null);
+    if (!resize.moved || !preview) return;
+    const result = await updateSession({
+      id: resize.session.id,
+      itemId: resize.session.itemId,
+      date: resize.dayKey,
+      startTime: timeLabel(preview.startMin),
+      durationMinutes: preview.endMin - preview.startMin,
+      description: resize.session.description ?? undefined,
+      timezone,
+    });
+    if (!result.ok) {
+      toast.error(result.error);
+      return;
+    }
+    router.refresh();
+  };
+
+  const cancelResize = () => {
+    sessionResize.current = null;
+    setResizePreview(null);
   };
 
   const handleContextMenu = (event: React.MouseEvent<HTMLDivElement>) => {
@@ -510,6 +613,19 @@ export function WeekCalendar({
                       </div>
                     ) : null}
 
+                    {resizePreview?.dayKey === day.key ? (
+                      <div
+                        className="pointer-events-none absolute left-1 right-1 z-30 rounded-md border border-primary bg-primary/20 px-1.5 py-1 text-[9px] font-bold text-primary shadow-sm"
+                        style={{
+                          top: (resizePreview.startMin / 60) * ROW_HEIGHT,
+                          height: Math.max(22, ((resizePreview.endMin - resizePreview.startMin) / 60) * ROW_HEIGHT),
+                        }}
+                      >
+                        {timeLabel(resizePreview.startMin)} – {timeLabel(resizePreview.endMin)} ·{" "}
+                        {formatDuration((resizePreview.endMin - resizePreview.startMin) * 60)}
+                      </div>
+                    ) : null}
+
                     {selection?.dayKey === day.key ? (
                       <div
                         className="pointer-events-none absolute left-1 right-1 z-[5] rounded-md border border-primary/60 bg-primary/15 px-1.5 py-1 text-[9px] font-bold text-primary"
@@ -530,6 +646,8 @@ export function WeekCalendar({
                       const color = segment.color;
                       const showTime = height > 32;
                       const showDescription = height > 52 && segment.session.description;
+                      const clippedTop = new Date(segment.session.startTime).getTime() < segment.start.getTime();
+                      const clippedBottom = new Date(segment.session.endTime).getTime() > segment.end.getTime();
                       return (
                         <button
                           key={`${segment.session.id}-${segment.startMin}-${segment.lane}`}
@@ -553,6 +671,7 @@ export function WeekCalendar({
                           className={cn(
                             "absolute z-10 cursor-grab touch-none overflow-hidden rounded-lg px-1.5 py-1 text-left transition-all duration-150 hover:z-20 hover:-translate-y-px hover:shadow-[0_5px_16px_-6px_rgba(15,15,25,0.35)] active:cursor-grabbing",
                             dragPreview?.sessionId === segment.session.id && "opacity-40",
+                            resizePreview?.sessionId === segment.session.id && "opacity-30",
                           )}
                           style={{
                             top,
@@ -582,6 +701,26 @@ export function WeekCalendar({
                             <span className="mt-0.5 block truncate text-[8px] leading-tight text-muted-2">
                               {segment.session.description}
                             </span>
+                          ) : null}
+                          {height > 26 && !clippedTop ? (
+                            <span
+                              aria-hidden
+                              onPointerDown={(event) => startResize(event, segment.session, segment, day.key, "top")}
+                              onPointerMove={moveResize}
+                              onPointerUp={endResize}
+                              onPointerCancel={cancelResize}
+                              className="absolute inset-x-0 top-0 z-20 h-2 cursor-ns-resize touch-none rounded-t-lg transition-colors hover:bg-primary/35"
+                            />
+                          ) : null}
+                          {height > 26 && !clippedBottom ? (
+                            <span
+                              aria-hidden
+                              onPointerDown={(event) => startResize(event, segment.session, segment, day.key, "bottom")}
+                              onPointerMove={moveResize}
+                              onPointerUp={endResize}
+                              onPointerCancel={cancelResize}
+                              className="absolute inset-x-0 bottom-0 z-20 h-2 cursor-ns-resize touch-none rounded-b-lg transition-colors hover:bg-primary/35"
+                            />
                           ) : null}
                         </button>
                       );
