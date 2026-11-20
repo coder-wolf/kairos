@@ -130,7 +130,7 @@ Email delivery uses [Resend](https://resend.com). Configure:
 
 ```env
 RESEND_API_KEY="re_..."
-EMAIL_FROM="Kairos <hello@your-domain.com>"
+EMAIL_FROM="Kairos <hello@kairos-app.live>"
 ```
 
 Once both `RESEND_API_KEY` and `EMAIL_FROM` are set, verification is enforced automatically. Existing accounts are
