@@ -131,7 +131,7 @@ export function GoalsSpreadsheet({
   const { openEditGoal, openManualTime, openNewGoal } = useQuickActions();
   const [filter, setFilter] = React.useState<(typeof FILTERS)[number]["key"]>("all");
   const [query, setQuery] = React.useState("");
-  const [sort, setSort] = React.useState<"priority" | "progress" | "streak">("priority");
+  const [sort, setSort] = React.useState<"name" | "priority" | "progress" | "streak">("name");
   const [toDelete, setToDelete] = React.useState<GoalSummary | null>(null);
   const [pending, startTransition] = React.useTransition();
 
@@ -165,6 +165,9 @@ export function GoalsSpreadsheet({
       paused: 7,
     };
     list.sort((a, b) => {
+      if (sort === "name") {
+        return a.goal.name.localeCompare(b.goal.name, undefined, { sensitivity: "base" });
+      }
       if (sort === "progress") return b.progress.percent - a.progress.percent;
       if (sort === "streak") return (b.streak?.current ?? 0) - (a.streak?.current ?? 0);
       return (risk[a.progress.status] ?? 99) - (risk[b.progress.status] ?? 99) || b.progress.percent - a.progress.percent;
@@ -227,6 +230,7 @@ export function GoalsSpreadsheet({
                   onChange={(event) => setSort(event.target.value as typeof sort)}
                   className="h-8 w-[150px] py-0 pl-8 text-[11px]"
                 >
+                  <option value="name">Name (A–Z)</option>
                   <option value="priority">Needs attention</option>
                   <option value="progress">Highest progress</option>
                   <option value="streak">Longest streak</option>

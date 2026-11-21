@@ -130,13 +130,8 @@ export default async function DashboardPage() {
     }))
     .sort((a, b) => b.streak.current - a.streak.current || b.streak.consistency - a.streak.consistency);
 
-  const periodOrder: Record<string, number> = { DAILY: 0, WEEKLY: 1, MONTHLY: 2, CUSTOM: 3 };
   const focusGoalItems = [...progresses]
-    .sort(
-      (a, b) =>
-        (periodOrder[a.goal.periodType] ?? 9) - (periodOrder[b.goal.periodType] ?? 9) ||
-        b.percent - a.percent,
-    )
+    .sort((a, b) => a.goal.name.localeCompare(b.goal.name, undefined, { sensitivity: "base" }))
     .map((progress) => ({
       goal: toGoalSummaries([progress.goal])[0],
       actualSeconds: progress.actualSeconds,
