@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import { descendantIds } from "@/lib/item-options";
 import { LiveTimer } from "@/components/timer/live-timer";
 import { useTimer } from "@/components/timer/timer-provider";
+import { useStoredState } from "@/components/dashboard/use-stored-state";
 import type { AreaNode } from "@/lib/types";
 import { cn, formatDuration, pluralize } from "@/lib/utils";
 
@@ -51,7 +52,8 @@ export function DashboardAreas({ nodes }: { nodes: AreaNode[] }) {
   const router = useRouter();
   const { start, timer } = useTimer();
   const { openManualTime, openNewGoal } = useQuickActions();
-  const [expanded, setExpanded] = React.useState<Set<string>>(new Set());
+  const [expandedIds, setExpandedIds] = useStoredState<string[]>("kairos:dashboard:areas-expanded", []);
+  const expanded = React.useMemo(() => new Set(expandedIds), [expandedIds]);
   const [sortMode, setSortMode] = React.useState<SortMode>("name");
   const [, startMove] = React.useTransition();
   const [dragging, setDragging] = React.useState<string | null>(null);
@@ -105,16 +107,11 @@ export function DashboardAreas({ nodes }: { nodes: AreaNode[] }) {
   const allExpanded = parentIds.length > 0 && parentIds.every((id) => expanded.has(id));
 
   const toggleExpandAll = () => {
-    setExpanded(allExpanded ? new Set() : new Set(parentIds));
+    setExpandedIds(allExpanded ? [] : parentIds);
   };
 
   const toggle = (id: string) => {
-    setExpanded((current) => {
-      const next = new Set(current);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+    setExpandedIds((current) => (current.includes(id) ? current.filter((entry) => entry !== id) : [...current, id]));
   };
 
   const renderNode = (node: Node): React.ReactNode => {

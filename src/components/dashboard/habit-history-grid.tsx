@@ -6,6 +6,7 @@ import { ChevronDown, ChevronUp, Flame } from "lucide-react";
 import type { Goal, Item } from "@prisma/client";
 import type { HabitDay, StreakSummary } from "@/lib/goals";
 import { cn, pluralize } from "@/lib/utils";
+import { useStoredState } from "@/components/dashboard/use-stored-state";
 
 type HabitEntry = {
   goal: Goal & { item: Item };
@@ -36,7 +37,7 @@ function cellStyle(entry: Pick<HabitDay, "complete" | "percent">): React.CSSProp
 const INITIAL_VISIBLE = 5;
 
 export function HabitHistoryGrid({ entries }: { entries: HabitEntry[] }) {
-  const [expanded, setExpanded] = React.useState(false);
+  const [expanded, setExpanded] = useStoredState("kairos:dashboard:habits-expanded", false);
   const visible = expanded ? entries : entries.slice(0, INITIAL_VISIBLE);
 
   if (entries.length === 0) {

@@ -19,8 +19,8 @@ import { FocusGoals } from "@/components/dashboard/focus-goals";
 import { HabitHistoryGrid } from "@/components/dashboard/habit-history-grid";
 import { DashboardQuickActions } from "@/components/dashboard/dashboard-quick-actions";
 import { RhythmCard } from "@/components/dashboard/rhythm-card";
+import { RecentSessionsCard } from "@/components/dashboard/recent-sessions-card";
 import { EmptyWorkspace } from "@/components/dashboard/empty-workspace";
-import { SessionTable } from "@/components/sessions/session-table";
 import { buildStackedSeries, totalSeconds } from "@/lib/analytics";
 import { getAppContext, toGoalSummaries, toSessionRows } from "@/lib/dal";
 import { aggregateDirectByItem, getSubtreeIds } from "@/lib/items";
@@ -103,7 +103,7 @@ export default async function DashboardPage() {
       new Date(Math.min(week.prevStart.getTime(), month.prevStart.getTime(), lookbackStart.getTime())),
       today.end,
     ),
-    getRecentSessions(user.workspace.id, 6),
+    getRecentSessions(user.workspace.id, 20),
   ]);
 
   const todaySeconds = totalSeconds(sessions, today.start, today.end);
@@ -312,7 +312,7 @@ export default async function DashboardPage() {
         </>
       ) : (
         <>
-          <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+          <div className="flex flex-col gap-5 xl:grid xl:grid-cols-2 xl:items-start">
             <div className="hidden min-w-0 xl:col-span-2 xl:block">
           <div className="grid grid-cols-2 gap-3 md:gap-4 xl:grid-cols-4">
             <StatCard label="Today" value={formatDuration(todaySeconds, { zero: "0m" })} icon={<Clock3 className="h-4 w-4" />}>
@@ -349,6 +349,7 @@ export default async function DashboardPage() {
           </div>
             </div>
 
+            <div className="contents xl:flex xl:min-w-0 xl:flex-col xl:gap-5">
             <div className="order-2 min-w-0 xl:order-none">
               <RhythmCard
                 weekTrend={weekBreakdown.points}
@@ -362,24 +363,6 @@ export default async function DashboardPage() {
                 weekLabel={week.label}
                 monthLabel={month.label}
               />
-            </div>
-
-            <div className="order-1 min-w-0 xl:order-none">
-              <section className="card overflow-hidden">
-                <div className="flex items-center justify-between border-b border-border px-5 py-4">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="h-4 w-4 text-primary" />
-                    <div>
-                      <h2 className="text-sm font-bold tracking-tight">Areas & projects</h2>
-                      <p className="text-[10px] text-muted-2">All-time tracked per area</p>
-                    </div>
-                  </div>
-                  <Link href="/workspace" className="inline-flex items-center gap-1 text-[11px] font-bold text-muted hover:text-primary">
-                    Open projects <ChevronRight className="h-3 w-3" />
-                  </Link>
-                </div>
-                <DashboardAreas nodes={areaNodes} />
-              </section>
             </div>
             <div className="order-4 min-w-0 xl:order-none">
               <section className="card overflow-hidden">
@@ -397,6 +380,29 @@ export default async function DashboardPage() {
                 <FocusGoals items={focusGoalItems} />
               </section>
             </div>
+            <div className="order-6 min-w-0 xl:order-none">
+              <RecentSessionsCard sessions={recentRows} timezone={tz} />
+            </div>
+            </div>
+
+            <div className="contents xl:flex xl:min-w-0 xl:flex-col xl:gap-5">
+            <div className="order-1 min-w-0 xl:order-none">
+              <section className="card overflow-hidden">
+                <div className="flex items-center justify-between border-b border-border px-5 py-4">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 text-primary" />
+                    <div>
+                      <h2 className="text-sm font-bold tracking-tight">Areas & projects</h2>
+                      <p className="text-[10px] text-muted-2">All-time tracked per area</p>
+                    </div>
+                  </div>
+                  <Link href="/workspace" className="inline-flex items-center gap-1 text-[11px] font-bold text-muted hover:text-primary">
+                    Open projects <ChevronRight className="h-3 w-3" />
+                  </Link>
+                </div>
+                <DashboardAreas nodes={areaNodes} />
+              </section>
+            </div>
             <div className="order-5 min-w-0 xl:order-none">
               <section className="card overflow-hidden">
                 <div className="flex items-center justify-between border-b border-border px-4 py-3.5">
@@ -409,27 +415,6 @@ export default async function DashboardPage() {
                   </Link>
                 </div>
                 <HabitHistoryGrid entries={habitGoals} />
-              </section>
-            </div>
-            <div className="order-6 min-w-0 xl:order-none">
-              <section className="card overflow-hidden">
-                <div className="flex items-center justify-between border-b border-border px-5 py-4">
-                  <h2 className="text-sm font-bold tracking-tight">Recent sessions</h2>
-                  <Link href="/history" className="inline-flex items-center gap-1 text-[11px] font-bold text-muted hover:text-primary">
-                    All history <ChevronRight className="h-3 w-3" />
-                  </Link>
-                </div>
-                <SessionTable
-                  sessions={recentRows}
-                  timezone={tz}
-                  compact
-                  emptyState={
-                    <div className="px-5 py-10 text-center">
-                      <p className="text-sm font-semibold">Your history starts with one session</p>
-                      <p className="mt-1 text-xs text-muted">Start a timer from the header, or add time retrospectively.</p>
-                    </div>
-                  }
-                />
               </section>
             </div>
             <div className="order-7 min-w-0 xl:order-none">
@@ -462,6 +447,7 @@ export default async function DashboardPage() {
                   </Link>
                 </div>
               </section>
+            </div>
             </div>
           </div>
 

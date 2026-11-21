@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { ChevronDown, ChevronUp, Flame, Play, Target } from "lucide-react";
 import { LiveTimer } from "@/components/timer/live-timer";
 import { useTimer } from "@/components/timer/timer-provider";
+import { useStoredState } from "@/components/dashboard/use-stored-state";
 import { Progress } from "@/components/ui/progress";
 import { GOAL_STATUS_META } from "@/lib/goals";
 import type { GoalSummary } from "@/lib/types";
@@ -43,7 +44,7 @@ function periodUnit(type: string) {
 export function FocusGoals({ items }: { items: FocusGoalItem[] }) {
   const router = useRouter();
   const { start, timer } = useTimer();
-  const [expanded, setExpanded] = React.useState(false);
+  const [expanded, setExpanded] = useStoredState("kairos:dashboard:focus-expanded", false);
   const visible = expanded ? items : items.slice(0, INITIAL_VISIBLE);
 
   if (items.length === 0) {
