@@ -100,12 +100,16 @@ export function aggregateByItem(
     direct.set(session.itemId, (direct.get(session.itemId) ?? 0) + seconds);
   }
 
+  return aggregateDirectByItem(items, direct);
+}
+
+/** Roll a map of direct per-item seconds up through every parent. */
+export function aggregateDirectByItem(items: Item[], direct: Map<string, number>) {
   const parentOf = getParentMap(items);
   const totals = new Map<string, number>();
-  for (const item of items) {
-    const seconds = direct.get(item.id);
-    if (!seconds) continue;
-    let current: string | null | undefined = item.id;
+  for (const [itemId, seconds] of direct) {
+    if (seconds <= 0) continue;
+    let current: string | null | undefined = itemId;
     let guard = 0;
     while (current && guard < 200) {
       totals.set(current, (totals.get(current) ?? 0) + seconds);
@@ -113,7 +117,6 @@ export function aggregateByItem(
       guard++;
     }
   }
-
   return totals;
 }
 

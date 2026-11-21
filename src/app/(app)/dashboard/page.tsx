@@ -23,9 +23,10 @@ import { EmptyWorkspace } from "@/components/dashboard/empty-workspace";
 import { SessionTable } from "@/components/sessions/session-table";
 import { buildStackedSeries, totalSeconds } from "@/lib/analytics";
 import { getAppContext, toGoalSummaries, toSessionRows } from "@/lib/dal";
-import { aggregateByItem, getSubtreeIds } from "@/lib/items";
+import { aggregateDirectByItem, getSubtreeIds } from "@/lib/items";
 import { computeGoalProgress, computeHabitDays, computeStreaks, goalItemIds, goalTouchesSubtree } from "@/lib/goals";
 import { getRecentSessions, getSessionsWindow } from "@/lib/queries";
+import { db } from "@/lib/db";
 import { getDateRange } from "@/lib/time";
 import { formatDuration, pluralize } from "@/lib/utils";
 
@@ -232,7 +233,15 @@ export default async function DashboardPage() {
     return day === 1 || day % 5 === 0 ? String(day) : "";
   });
 
-  const totals = aggregateByItem(activeItems, weekSessions);
+  const lifetimeTotals = await db.timeSession.groupBy({
+    by: ["itemId"],
+    where: { workspaceId: user.workspace.id },
+    _sum: { durationSeconds: true },
+  });
+  const totals = aggregateDirectByItem(
+    items,
+    new Map(lifetimeTotals.map((row) => [row.itemId, row._sum.durationSeconds ?? 0])),
+  );
   const goalSubtreeCache = new Map(activeItems.map((item) => [item.id, getSubtreeIds(items, item.id)]));
   const areaNodes = activeItems.map((item) => ({
     id: item.id,
@@ -365,7 +374,10 @@ export default async function DashboardPage() {
                 <div className="flex items-center justify-between border-b border-border px-5 py-4">
                   <div className="flex items-center gap-2">
                     <Sparkles className="h-4 w-4 text-primary" />
-                    <h2 className="text-sm font-bold tracking-tight">Areas & projects</h2>
+                    <div>
+                      <h2 className="text-sm font-bold tracking-tight">Areas & projects</h2>
+                      <p className="text-[10px] text-muted-2">All-time tracked per area</p>
+                    </div>
                   </div>
                   <Link href="/workspace" className="inline-flex items-center gap-1 text-[11px] font-bold text-muted hover:text-primary">
                     Open projects <ChevronRight className="h-3 w-3" />
