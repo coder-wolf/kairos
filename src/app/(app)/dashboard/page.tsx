@@ -350,7 +350,7 @@ export default async function DashboardPage() {
             </div>
 
             <div className="contents xl:flex xl:min-w-0 xl:flex-col xl:gap-5">
-            <div className="order-2 min-w-0 xl:order-none">
+            <div className="order-1 min-w-0 xl:order-none">
               <RhythmCard
                 weekTrend={weekBreakdown.points}
                 monthTrend={monthBreakdown.points}
@@ -364,7 +364,7 @@ export default async function DashboardPage() {
                 monthLabel={month.label}
               />
             </div>
-            <div className="order-4 min-w-0 xl:order-none">
+            <div className="order-3 min-w-0 xl:order-none">
               <section className="card overflow-hidden">
                 <div className="flex items-center justify-between border-b border-border px-4 py-3.5">
                   <div>
@@ -380,13 +380,13 @@ export default async function DashboardPage() {
                 <FocusGoals items={focusGoalItems} />
               </section>
             </div>
-            <div className="order-6 min-w-0 xl:order-none">
+            <div className="order-5 min-w-0 xl:order-none">
               <RecentSessionsCard sessions={recentRows} timezone={tz} />
             </div>
             </div>
 
             <div className="contents xl:flex xl:min-w-0 xl:flex-col xl:gap-5">
-            <div className="order-1 min-w-0 xl:order-none">
+            <div className="order-2 min-w-0 xl:order-none">
               <section className="card overflow-hidden">
                 <div className="flex items-center justify-between border-b border-border px-5 py-4">
                   <div className="flex items-center gap-2">
@@ -403,7 +403,7 @@ export default async function DashboardPage() {
                 <DashboardAreas nodes={areaNodes} />
               </section>
             </div>
-            <div className="order-5 min-w-0 xl:order-none">
+            <div className="order-4 min-w-0 xl:order-none">
               <section className="card overflow-hidden">
                 <div className="flex items-center justify-between border-b border-border px-4 py-3.5">
                   <div className="flex items-center gap-2">
@@ -417,7 +417,7 @@ export default async function DashboardPage() {
                 <HabitHistoryGrid entries={habitGoals} />
               </section>
             </div>
-            <div className="order-7 min-w-0 xl:order-none">
+            <div className="order-6 min-w-0 xl:order-none">
               <section className="card p-4">
                 <h2 className="text-sm font-bold tracking-tight">Quick actions</h2>
                 <div className="mt-3 grid grid-cols-2 gap-2">
