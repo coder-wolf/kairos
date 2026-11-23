@@ -8,7 +8,7 @@ export function DashboardQuickActions() {
   const { openManualTime, openNewGoal, openNewItem } = useQuickActions();
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="hidden flex-wrap items-center gap-2 md:flex">
       <Button variant="outline" onClick={() => openManualTime()} className="gap-2">
         <ClockPlus className="h-4 w-4" />
         Add time
