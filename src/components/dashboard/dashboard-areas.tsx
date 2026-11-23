@@ -52,7 +52,11 @@ export function DashboardAreas({ nodes }: { nodes: AreaNode[] }) {
   const router = useRouter();
   const { start, timer } = useTimer();
   const { openManualTime, openNewGoal } = useQuickActions();
-  const [expandedIds, setExpandedIds] = useStoredState<string[]>("kairos:dashboard:areas-expanded", []);
+  const parentIds = React.useMemo(
+    () => nodes.filter((node) => nodes.some((child) => child.parentId === node.id)).map((node) => node.id),
+    [nodes],
+  );
+  const [expandedIds, setExpandedIds] = useStoredState<string[]>("kairos:dashboard:areas-expanded-v2", parentIds);
   const expanded = React.useMemo(() => new Set(expandedIds), [expandedIds]);
   const [sortMode, setSortMode] = React.useState<SortMode>("name");
   const [, startMove] = React.useTransition();
@@ -100,10 +104,6 @@ export function DashboardAreas({ nodes }: { nodes: AreaNode[] }) {
     });
   };
 
-  const parentIds = React.useMemo(
-    () => nodes.filter((node) => nodes.some((child) => child.parentId === node.id)).map((node) => node.id),
-    [nodes],
-  );
   const allExpanded = parentIds.length > 0 && parentIds.every((id) => expanded.has(id));
 
   const toggleExpandAll = () => {
