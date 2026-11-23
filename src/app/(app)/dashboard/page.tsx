@@ -6,7 +6,6 @@ import {
   ArrowUpRight,
   BarChart3,
   CalendarDays,
-  ChevronRight,
   Clock3,
   Flame,
   Plus,
@@ -15,6 +14,7 @@ import {
   Timer,
 } from "lucide-react";
 import { DashboardAreas } from "@/components/dashboard/dashboard-areas";
+import { AddProjectButton } from "@/components/dashboard/add-project-button";
 import { FocusGoals } from "@/components/dashboard/focus-goals";
 import { HabitHistoryGrid } from "@/components/dashboard/habit-history-grid";
 import { DashboardQuickActions } from "@/components/dashboard/dashboard-quick-actions";
@@ -396,9 +396,7 @@ export default async function DashboardPage() {
                       <p className="text-[10px] text-muted-2">All-time tracked per area</p>
                     </div>
                   </div>
-                  <Link href="/workspace" className="inline-flex items-center gap-1 text-[11px] font-bold text-muted hover:text-primary">
-                    Open projects <ChevronRight className="h-3 w-3" />
-                  </Link>
+                  <AddProjectButton />
                 </div>
                 <DashboardAreas nodes={areaNodes} />
               </section>
