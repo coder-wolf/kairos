@@ -63,6 +63,7 @@ function GoalDialogBody({
   const [pending, startTransition] = React.useTransition();
   const initialPeriod = initial?.periodType ?? "WEEKLY";
   const initialMinutes = initial ? initial.targetSeconds / 60 : 60;
+  const initialUnit: "hours" | "minutes" = initialMinutes >= 60 ? "hours" : "minutes";
 
   const [name, setName] = React.useState(initial?.name ?? "");
   const [itemIds, setItemIds] = React.useState<string[]>(
@@ -76,14 +77,14 @@ function GoalDialogBody({
   );
   const [value, setValue] = React.useState(
     initial
-      ? initialPeriod === "DAILY"
-        ? String(Math.round(initialMinutes))
-        : String(Number((initialMinutes / 60).toFixed(2)))
+      ? initialUnit === "hours"
+        ? String(Number((initialMinutes / 60).toFixed(2)))
+        : String(Math.round(initialMinutes))
       : initialPeriod === "DAILY"
         ? "30"
         : "5",
   );
-  const [unit, setUnit] = React.useState<"hours" | "minutes">(initialPeriod === "DAILY" ? "minutes" : "hours");
+  const [unit, setUnit] = React.useState<"hours" | "minutes">(initialUnit);
   const [periodType, setPeriodType] = React.useState<string>(initialPeriod);
   const [days, setDays] = React.useState<number[]>(initial?.daysOfWeek ?? []);
   const [startDate, setStartDate] = React.useState(
@@ -248,7 +249,6 @@ function GoalDialogBody({
                   type="button"
                   onClick={() => {
                     setPeriodType(period.value);
-                    if (period.value === "DAILY" && !initial) setUnit("minutes");
                     if (period.value === "CUSTOM" && !endDate) setEndDate(addDaysToKey(todayKey, 30));
                   }}
                   className={cn(
