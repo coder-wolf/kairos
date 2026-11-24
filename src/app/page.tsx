@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
 import Image, { type StaticImageData } from "next/image";
+import { redirect } from "next/navigation";
 import Link from "next/link";
 import analyticsShot from "../../docs/screenshots/analytics.png";
 import calendarShot from "../../docs/screenshots/calendar.png";
 import dashboardShot from "../../docs/screenshots/dashboard.png";
 import goalsShot from "../../docs/screenshots/goals.png";
 import timerShot from "../../docs/screenshots/timer.png";
+import { db } from "@/lib/db";
+import { getSession } from "@/lib/session";
 import {
   ArrowRight,
   BarChart3,
@@ -255,7 +258,13 @@ function Screenshot({
   );
 }
 
-export default function HomePage() {
+export default async function HomePage() {
+  const session = await getSession();
+  if (session) {
+    const exists = await db.user.findUnique({ where: { id: session.userId }, select: { id: true } });
+    if (exists) redirect("/dashboard");
+  }
+
   return (
     <div className="min-h-dvh bg-bg text-text">
       <script
